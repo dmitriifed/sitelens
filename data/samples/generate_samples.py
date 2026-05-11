@@ -14,15 +14,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from src.data.load_vescovo import load_sample
+import pandas as pd
+
+from src.data.load_vescovo import load_bbox, ASAICHI_BBOX
 from src.data.records_to_text import gdf_to_records
 
 OUT_PATH = Path("data/samples/sample_records.json")
 
 
 def main():
-    print("Loading stratified sample from GPKG...")
-    gdf = load_sample(n_destroyed=12, n_survived=6, n_obstructed=2)
+    print("Loading fire-zone sample from GPKG (Wajima Asaichi bbox)...")
+    gdf_all = load_bbox(bbox=ASAICHI_BBOX)
+    gdf_fire = gdf_all[(gdf_all["damage_val"] == 1) & (gdf_all["GSI_fire"] == 1)].head(12)
+    gdf_surv = gdf_all[gdf_all["damage_val"] == 0].head(6)
+    gdf_obs  = gdf_all[gdf_all["damage_val"] == 9].head(2)
+    gdf = pd.concat([gdf_fire, gdf_surv, gdf_obs], ignore_index=True)
     print(f"  {len(gdf)} records loaded  ({gdf['damage_val'].value_counts().to_dict()})")
 
     records = gdf_to_records(gdf)

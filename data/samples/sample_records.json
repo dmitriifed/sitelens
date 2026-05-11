@@ -1,82 +1,92 @@
 [
   {
     "id": "bldg_0000",
-    "text": "Building destroyed. Hazard: seismic only. MMI 8.4 (severe shaking). Location: 石川県、輪島市、水守町. Evidence: single-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町川端丁"
   },
   {
     "id": "bldg_0001",
-    "text": "Building destroyed. Hazard: seismic only. MMI 8.4 (severe shaking). Location: 石川県、輪島市、山本町. Evidence: single-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町川端丁"
   },
   {
     "id": "bldg_0002",
-    "text": "Building destroyed. Hazard: seismic only. MMI 8.4 (severe shaking). Location: 石川県、輪島市、鳳至町畠田東. Evidence: multi-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町川端丁"
   },
   {
     "id": "bldg_0003",
-    "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Location: 石川県、珠洲市、三崎町. Evidence: single-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町川端丁"
   },
   {
     "id": "bldg_0004",
-    "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Location: 石川県、珠洲市、三崎町. Evidence: single-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町森の下"
   },
   {
     "id": "bldg_0005",
-    "text": "Building destroyed. Hazard: tsunami. MMI 8.8 (severe shaking). Location: 石川県、珠洲市、上戸町. Evidence: multi-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町川端丁"
   },
   {
     "id": "bldg_0006",
-    "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Location: 石川県、珠洲市、三崎町. Evidence: single-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町森の下"
   },
   {
     "id": "bldg_0007",
-    "text": "Building destroyed. Hazard: tsunami. MMI 8.8 (severe shaking). Location: 石川県、珠洲市、飯田町. Evidence: multi-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町森の下"
   },
   {
     "id": "bldg_0008",
-    "text": "Building destroyed. Hazard: tsunami. MMI 8.2 (severe shaking). Location: 石川県、能登町、字白丸下出. Evidence: single-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町森の下"
   },
   {
     "id": "bldg_0009",
-    "text": "Building destroyed. Hazard: tsunami. MMI 8.2 (severe shaking). Location: 石川県、能登町、字白丸下出. Evidence: single-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町森の下"
   },
   {
     "id": "bldg_0010",
-    "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Location: 石川県、珠洲市、宝立町. Evidence: single-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町川端丁"
   },
   {
     "id": "bldg_0011",
-    "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Location: 石川県、珠洲市、三崎町. Evidence: single-source assessment."
+    "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、河井町川端丁"
   },
   {
     "id": "bldg_0012",
-    "text": "Building survived. Hazard: tsunami. MMI 8.4 (severe shaking). Location: 石川県、能登町、字四方山. Evidence: single-source assessment."
+    "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
   },
   {
     "id": "bldg_0013",
-    "text": "Building survived. Hazard: tsunami. MMI 8.4 (severe shaking). Location: 石川県、能登町、字立壁. Evidence: single-source assessment."
+    "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
   },
   {
     "id": "bldg_0014",
-    "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Location: 石川県、輪島市、南町. Evidence: single-source assessment."
+    "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
   },
   {
     "id": "bldg_0015",
-    "text": "Building survived. Hazard: seismic only. MMI 8.2 (severe shaking). Location: 石川県、輪島市、輪島崎町仲町. Evidence: multi-source assessment."
+    "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
   },
   {
     "id": "bldg_0016",
-    "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Location: 石川県、輪島市、鳳至町稲荷西一. Evidence: multi-source assessment."
+    "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
   },
   {
     "id": "bldg_0017",
-    "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Location: 石川県、輪島市、水守町. Evidence: single-source assessment."
-  },
-  {
-    "id": "bldg_0018",
-    "text": "Building obstructed. Hazard: seismic only. MMI 8.6 (severe shaking). Location: 石川県、輪島市、山岸町. Evidence: single-source assessment."
-  },
-  {
-    "id": "bldg_0019",
-    "text": "Building obstructed. Hazard: seismic only. MMI 8.4 (severe shaking). Location: 石川県、輪島市、小伊勢町. Evidence: single-source assessment."
+    "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
   }
 ]

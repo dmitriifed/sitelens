@@ -23,6 +23,7 @@ def mmi_label(mmi: float) -> str:
 
 
 def row_to_text(row) -> str:
+    """ASCII-only embedding text — no Japanese. Municipality stored separately."""
     outcome = DAMAGE_TEXT.get(row.damage_val, "unknown")
     hazards = [
         h for h, flag in [
@@ -34,16 +35,23 @@ def row_to_text(row) -> str:
     ]
     haz_str = ", ".join(hazards) if hazards else "seismic only"
     mmi_str = f"MMI {row.USGS_MMI:.1f} ({mmi_label(row.USGS_MMI)} shaking)"
-    loc = row.municipality if pd.notna(row.municipality) else "unknown municipality"
     return (
         f"Building {outcome}. Hazard: {haz_str}. {mmi_str}. "
-        f"Location: {loc}. Evidence: {row.conf}-source assessment."
+        f"Evidence: {row.conf}-source assessment."
     )
 
 
 def gdf_to_records(gdf, id_prefix: str = "bldg") -> list[dict]:
-    """Convert a GeoDataFrame to a list of {id, text} dicts ready for embedding."""
+    """Convert a GeoDataFrame to a list of {id, text, municipality} dicts.
+
+    text is ASCII-only (for embedding). municipality is stored as a separate
+    constant field in metadata — Japanese, not embedded in the corpus text.
+    """
     return [
-        {"id": f"{id_prefix}_{i:04d}", "text": row_to_text(row)}
+        {
+            "id": f"{id_prefix}_{i:04d}",
+            "text": row_to_text(row),
+            "municipality": row.municipality if pd.notna(row.municipality) else "",
+        }
         for i, (_, row) in enumerate(gdf.iterrows())
     ]
