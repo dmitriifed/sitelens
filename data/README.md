@@ -57,13 +57,13 @@ Overlays Vescovo et al. damage polygons on the orthophoto, validates polygon-ort
 
 **Status:** Layer-0 validated, CRS mismatch handling implemented, no further work required.
 
-**Inputs:** Orthophoto GeoTIFF, polygon GeoJSON (Vescovo et al. format)
+**Inputs:** Orthophoto GeoTIFF, polygon GeoPackage (Vescovo et al. format)
 
 **Outputs:** Three PNG visualizations + validation log
 
 ### `crop_extractor.py` (Week 11 deliverable)
 
-Extracts per-building crops from the orthophoto at a fixed size (e.g., 256×256 px) centered on each building polygon, producing a dataset for CNN training. Expected inputs: orthophoto GeoTIFF, polygon GeoJSON. Expected outputs: crops/ directory with numbered `.png` files + metadata CSV.
+Extracts per-building crops from the orthophoto at a fixed size (e.g., 256×256 px) centered on each building polygon, producing a dataset for CNN training. Expected inputs: orthophoto GeoTIFF, polygon GeoPackage. Expected outputs: crops/ directory with numbered `.png` files + metadata CSV.
 
 **Status:** To be implemented Week 11.
 
@@ -116,4 +116,4 @@ cd ..
 pip install -r requirements.txt
 ```
 
-Then fetch tiles for the hero zone (example bounding box TBD) and validate with overlay script as a first reproducibility test.
+Then fetch tiles for the hero zone and validate with the overlay script as a first reproducibility test.
