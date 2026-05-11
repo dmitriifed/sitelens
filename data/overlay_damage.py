@@ -42,9 +42,9 @@ from shapely.geometry import box
 # ============================================================================
 # CONFIG
 # ============================================================================
-TIFF_PATH = Path("gsi_output/mosaic_20240102noto_wazimanaka_0111do_z18.tif")
-GPKG_PATH = Path("Noto_Peninsula_Damage_2_5.gpkg")
-OUT_DIR = Path("overlay_output")
+TIFF_PATH = Path("pipeline/gsi_output/mosaic_20240102noto_wazimanaka_0111do_z18.tif")
+GPKG_PATH = Path("data/raw/Noto_Peninsula_Damage_2_5.gpkg")
+OUT_DIR = Path("pipeline/overlay_output")
 
 # Image enhancement (GSI Noto orthos are dim; brighten before overlay)
 BRIGHTNESS = 1.3
