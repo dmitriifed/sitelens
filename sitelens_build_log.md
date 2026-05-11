@@ -151,36 +151,53 @@ Beats (placeholder):
 
 ## 9. Repository structure
 
-Drafted in the May 10 2026 setup session.
+Updated May 11 2026 to reflect Week 8 refactor.
 
 ```
 sitelens/
 ├── README.md
 ├── LICENSE
 ├── .gitignore
-├── sitelens_build_log.md       (this file)
+├── sitelens_build_log.md           (this file)
+├── .env                            (gitignored — PINECONE_API_KEY etc.)
 ├── data/
-│   ├── README.md               (data attribution: Vescovo et al., GSI)
-│   ├── fetch_gsi_tiles.py
-│   ├── overlay_damage.py
-│   └── crop_extractor.py       (Week 11 deliverable)
+│   ├── README.md                   (data attribution: Vescovo et al., GSI)
+│   ├── raw/                        (gitignored — full GPKG, GSI tiles)
+│   ├── processed/                  (gitignored — embeddings cache, generated text)
+│   ├── samples/                    (committed — 20-record JSON for hello-world & tests)
+│   │   ├── generate_samples.py     (run once to produce sample_records.json)
+│   │   └── sample_records.json     (committed after generation)
+│   └── crop_extractor.py           (Week 11 deliverable)
 ├── notebooks/
-│   ├── week08_vector_db.ipynb
-│   ├── week09_report_gen.ipynb
-│   ├── week10_agent.ipynb      (optional)
-│   └── week11_classifier.ipynb
+│   ├── 01_vescovo_schema.ipynb     (schema reference, value distributions)
+│   ├── 02_hello_world_rag.ipynb    (Week 8 — Pinecone + sentence-transformers)
+│   ├── week09_report_gen.ipynb     (Week 9 deliverable)
+│   ├── week10_agent.ipynb          (Week 10 — optional)
+│   └── week11_classifier.ipynb     (Week 11 deliverable)
+├── src/
+│   ├── data/
+│   │   ├── load_vescovo.py         (GPKG loading, spatial filters)
+│   │   └── records_to_text.py      (row_to_text, gdf_to_records)
+│   ├── embedding/
+│   │   └── embed_records.py        (sentence-transformer wrapper, lazy-load)
+│   └── retrieval/
+│       └── pinecone_client.py      (connect, upsert, query helpers)
 ├── model/
-│   ├── train.py                (Week 11 deliverable)
-│   ├── evaluate.py             (Week 11 deliverable)
-│   └── weights/                (gitignored except for README placeholder)
+│   ├── train.py                    (Week 11 deliverable)
+│   ├── evaluate.py                 (Week 11 deliverable)
+│   └── weights/                    (gitignored except placeholder)
 ├── pipeline/
-│   └── run_inference.py        (Week 11–12 deliverable)
+│   ├── fetch_gsi_tiles.py          (Layer-0 — GSI tile fetcher, validated)
+│   ├── regenerate_multihazard.py   (Layer-0 — polygon overlay + multihazard vis, validated)
+│   └── run_inference.py            (Week 11–12 deliverable)
 ├── report/
-│   ├── generator.py            (Week 9 deliverable)
+│   ├── generator.py                (Week 9 deliverable)
 │   └── prompts/
 └── app/
-    └── gradio_demo.py          (Week 12 deliverable)
+    └── gradio_demo.py              (Week 12 deliverable)
 ```
+
+**Run all pipeline scripts from the project root (`sitelens/`).** Relative paths in scripts resolve against CWD.
 
 ---
 

@@ -1,13 +1,13 @@
 """
-overlay_damage.py — Polygon-orthophoto overlay validation.
+regenerate_multihazard.py — Polygon-orthophoto overlay and multihazard visualisation.
 
-Part of SiteLens AI. Layer-0 data preparation.
+Part of SiteLens AI. Layer-0 pipeline script.
 
 Data sources:
 - GSI post-event orthophoto tiles, captured 11 January 2024.
   Required attribution: 「地理院タイル」 (Map tiles by GSI).
-- Vescovo, R. et al. (2025). Noto Peninsula 2024 earthquake building 
-  damage assessment. Zenodo. https://doi.org/10.5281/zenodo.11055711. 
+- Vescovo, R. et al. (2025). Noto Peninsula 2024 earthquake building
+  damage assessment. Zenodo. https://doi.org/10.5281/zenodo.11055711.
   Licensed CC-BY 4.0.
 
 Produces three outputs in overlay_output/:
@@ -22,9 +22,8 @@ Attribution required when using outputs:
   - Building damage data: Vescovo et al. 2025, doi:10.5281/zenodo.11055711 (CC-BY 4.0)
 
 Usage:
-    Edit TIFF_PATH and GPKG_PATH below, then:
-    pip install geopandas rasterio matplotlib pillow
-    python overlay_damage.py
+    Run from the project root (sitelens/):
+    python pipeline/regenerate_multihazard.py
 """
 
 from pathlib import Path
@@ -42,9 +41,9 @@ from shapely.geometry import box
 # ============================================================================
 # CONFIG
 # ============================================================================
-TIFF_PATH = Path("pipeline/gsi_output/mosaic_20240102noto_wazimanaka_0111do_z18.tif")
+TIFF_PATH = Path("gsi_output/mosaic_20240102noto_wazimanaka_0111do_z18.tif")
 GPKG_PATH = Path("data/raw/Noto_Peninsula_Damage_2_5.gpkg")
-OUT_DIR = Path("pipeline/overlay_output")
+OUT_DIR = Path("overlay_output")
 
 # Image enhancement (GSI Noto orthos are dim; brighten before overlay)
 BRIGHTNESS = 1.3
