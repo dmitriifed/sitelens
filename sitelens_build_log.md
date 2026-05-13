@@ -124,7 +124,32 @@ This means catch-up happens by forward motion, with one short evening review (60
 
 ### Week 8 (May 10–14): vector DB / retrieval
 
-*To be filled in as the week progresses.*
+**Built:** schema reference (`01_vescovo_schema.ipynb`), end-to-end RAG hello-world (`02_hello_world_rag.ipynb`), RAG + summarisation prototype (`03_summarisation.ipynb`). Sample data committed: 18 Wajima Asaichi fire-zone records (`data/samples/sample_records.json`, 12 destroyed / 6 survived).
+
+**Stack:** `sentence-transformers/all-MiniLM-L6-v2` for embeddings (pre-trained, general-domain, kept as-is); Pinecone serverless for vector store; rule-based template parser + narrative generator for summarisation (NOT abstractive ML — see below).
+
+**Architectural decision — the layered gradient (load-bearing insight of Week 8).**
+
+The system is a layered pipeline where structure increases up the chain of command. Each tool sits in its appropriate layer; structure is not forced on lower layers where messy reality belongs.
+
+- *Raw layer:* free-form inspector input. Messy, partial, possibly contradictory. Preserved unprocessed.
+- *Retrieval layer:* sentence-transformer similarity surfaces precedent records. Semi-structured. Ranked but unaggregated. Raw records remain visible with similarity scores.
+- *Narrative layer:* rule-based aggregation across the retrieved set. Deterministic, grounded, audit-ready (`parse_hits` + `narrative_sentence`).
+- *Audit layer:* timestamped, attributable, version-stamped. Highest structure. Currently implicit in Pinecone metadata; will become explicit in Streamlit display.
+
+Each layer is visible to the layer above. Field decision-maker sees raw + retrieval; senior coordinator sees narrative + audit. Nothing hidden from the floor; nothing unprocessed reaches the senior office. The structural gradient mirrors the Sensing Risk chain-of-command reduction thesis (Sensing Risk decisions log §1) — this is the empowerment thesis in product architecture.
+
+**Rejected at the narrative layer:** t5-small as abstractive summariser. Tested 13 May 2026 on top-3 retrieved records. Output:
+
+> *"Summary: evidence: multi-source assessment. Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). evidence: multi-source assessment. evidence: multi-source assessment."*
+
+Regurgitation with repeated phrases and no aggregation. Diagnosis: general-domain abstractive models on already-templated input have nothing to compress; they re-emit chunks. Not specific to t5-small — BART or Pegasus would fail similarly. ML summarisation belongs *above* or *below* the narrative layer (consuming the rule-based narrative + raw records, or parsing free-form input into structured fields), not *at* it.
+
+**Four faces of rigidity** (Week 11+ map, not today):
+- *Input rigidity* — parser assumes exact template format. Loosens with a learned parser or LLM-based field extraction.
+- *Coverage rigidity* — only four template fields. Loosens cheaply by extending the template (footprint, centroid, adjacent-damage context).
+- *Output rigidity* — finite if/elif tree. Loosens with fine-tuned generation (capstone fine-tuning question).
+- *Domain rigidity* — Vescovo schema only. Loosens highest-leverage by ingesting free-form documents (Vescovo paper PDF, MLIT damage manuals).
 
 ---
 
@@ -138,14 +163,16 @@ This means catch-up happens by forward motion, with one short evening review (60
 
 Six-beat structure inherited from the Sensing Risk demo video concept (Sensing Risk decisions log §11, post-submission asset). Evolves as the build evolves; final draft in Week 12 against the actual demo state.
 
-Beats (placeholder):
+**Week 8 / hackathon demo (Day 3 deliverable):**
 
-1. The problem.
-2. The dataset.
-3. The CV pipeline.
-4. The report.
-5. The result.
-6. What's next.
+1. *The problem* — inspector at a damaged building, senior staff in office, decision asymmetry.
+2. *Free-form input* — inspector describes what they see in plain English.
+3. *Retrieval* — similar past records surface with similarity scores. Raw, ranked, unaggregated.
+4. *Narrative* — rule-based aggregation produces a structured field assessment.
+5. *Audit* — timestamped, attributable, model-versioned record for the senior coordinator.
+6. *What's next* — four rigidity faces, how they loosen toward Week 11.
+
+The four layers are visible on one Streamlit page. The viewer's eye moves down through the structural gradient — that's the demo.
 
 ---
 

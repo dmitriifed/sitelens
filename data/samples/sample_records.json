@@ -88,5 +88,35 @@
     "id": "bldg_0017",
     "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
     "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
+  },
+  {
+    "id": "bldg_0018",
+    "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Evidence: single-source assessment.",
+    "municipality": "石川県、珠洲市、三崎町"
+  },
+  {
+    "id": "bldg_0019",
+    "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Evidence: single-source assessment.",
+    "municipality": "石川県、珠洲市、三崎町"
+  },
+  {
+    "id": "bldg_0020",
+    "text": "Building destroyed. Hazard: tsunami. MMI 8.8 (severe shaking). Evidence: multi-source assessment.",
+    "municipality": "石川県、珠洲市、上戸町"
+  },
+  {
+    "id": "bldg_0021",
+    "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Evidence: single-source assessment.",
+    "municipality": "石川県、珠洲市、三崎町"
+  },
+  {
+    "id": "bldg_0022",
+    "text": "Building survived. Hazard: tsunami. MMI 8.4 (severe shaking). Evidence: single-source assessment.",
+    "municipality": "石川県、能登町、字四方山"
+  },
+  {
+    "id": "bldg_0023",
+    "text": "Building survived. Hazard: tsunami. MMI 8.4 (severe shaking). Evidence: single-source assessment.",
+    "municipality": "石川県、能登町、字立壁"
   }
 ]

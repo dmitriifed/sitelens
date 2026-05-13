@@ -134,3 +134,7 @@ model/weights/*.pkl
 model/weights/*.ckpt
 model/weights/*.safetensors
 model/weights/*.onnx
+
+# Data directories (keep the directories themselves, but ignore their contents)
+data/raw/
+data/processed/

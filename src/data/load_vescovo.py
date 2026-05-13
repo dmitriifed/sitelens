@@ -29,3 +29,10 @@ def load_fire_zone(gpkg_path=DEFAULT_GPKG):
     """Destroyed buildings in the Wajima Asaichi fire zone (GSI_fire=1)."""
     gdf = load_bbox(gpkg_path=gpkg_path, bbox=ASAICHI_BBOX)
     return gdf[(gdf["damage_val"] == 1) & (gdf["GSI_fire"] == 1)]
+
+
+def load_tsunami_zone(gpkg_path=DEFAULT_GPKG, n_destroyed=4, n_survived=2):
+    """Stratified sample from tsunami hazard zone (GSI_tsunami=1)."""
+    gdf_d = gpd.read_file(gpkg_path, layer=LAYER, where="GSI_tsunami = 1 AND damage_val = 1").head(n_destroyed)
+    gdf_s = gpd.read_file(gpkg_path, layer=LAYER, where="GSI_tsunami = 1 AND damage_val = 0").head(n_survived)
+    return pd.concat([gdf_d, gdf_s], ignore_index=True)
