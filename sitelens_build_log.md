@@ -236,6 +236,7 @@ sitelens/
 - Whether to migrate the multihazard rendering script from Sensing Risk into SiteLens or keep it Sensing Risk-only. Lean: keep it Sensing Risk-only; SiteLens produces its own predicted-vs-ground-truth visualisations.
 - License: MIT confirmed as default. Switch only if a specific reason emerges.
 - Repo public from day one, or private until demo day? Default: private until Week 12, public for Demo Day. Easy to flip.
+- Evidence-class axis (surfaced 13 May 2026, hackathon Day 1). The layered gradient (raw → retrieval → narrative → audit) is the *structural* axis. There is an orthogonal *epistemic* axis the system does not yet track: each datum is one of *conclusive/definitive* (e.g. Vescovo damage label, peer-reviewed measurement), *cross-referential/supportive* (e.g. similarity score, hazard-zone overlay, multi-source agreement), or *subjective/personified* (e.g. inspector field note, witness statement). Both axes matter independently. A definitive record at the raw layer is treated differently from a subjective record at the audit layer; the current system collapses the second axis. For Week 11+: data model should carry an `evidence_class` field; UI should surface class (colour, label, qualifier). Parallel to consular/legal/intelligence systems (documents vs cross-references vs interview); deck's Slide C has a related but distinct framework (citation-strength classes A–D for external sources). Worth a structured exploration before Week 11 capstone scope is locked.
 
 ---
 
