@@ -2,6 +2,11 @@
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://sitelens.streamlit.app/)
 
+![Wajima Asaichi multihazard attribution — Vescovo damage labels over GSI orthophoto](docs/wajima_mini_multihazard_v2.png)
+
+*Wajima Asaichi district, 11 Jan 2024. 442 destroyed buildings classified by hazard mechanism: 311 fire (red), 131 seismic-only (orange), against 1,603 survivors. Imagery: GSI 47 cm/pixel orthophoto. Damage labels: Vescovo et al. 2025 (CC-BY 4.0, F1=0.94 against ground survey).*
+
+
 > A multimodal building damage assessment pipeline: classifies per-building damage from aerial imagery using a CV model evaluated against peer-reviewed ground-truth labels from the 2024 Noto earthquake, and generates structured inspection reports using a language model.
 
 **Status:** Capstone project in active development. Developers Institute GenAI & Machine Learning Bootcamp, 2026 cohort. Target completion: 14 June 2026.
