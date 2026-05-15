@@ -42,16 +42,20 @@ def row_to_text(row) -> str:
 
 
 def gdf_to_records(gdf, id_prefix: str = "bldg") -> list[dict]:
-    """Convert a GeoDataFrame to a list of {id, text, municipality} dicts.
+    """Convert a GeoDataFrame to a list of {id, text, municipality, lat, lon} dicts.
 
     text is ASCII-only (for embedding). municipality is stored as a separate
     constant field in metadata — Japanese, not embedded in the corpus text.
+    lat/lon are the building centroid in WGS-84 degrees.
     """
-    return [
-        {
+    records = []
+    for i, (_, row) in enumerate(gdf.iterrows()):
+        centroid = row.geometry.centroid
+        records.append({
             "id": f"{id_prefix}_{i:04d}",
             "text": row_to_text(row),
             "municipality": row.municipality if pd.notna(row.municipality) else "",
-        }
-        for i, (_, row) in enumerate(gdf.iterrows())
-    ]
+            "lat": float(centroid.y),
+            "lon": float(centroid.x),
+        })
+    return records

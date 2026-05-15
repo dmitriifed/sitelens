@@ -2,121 +2,169 @@
   {
     "id": "bldg_0000",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町川端丁"
+    "municipality": "石川県、輪島市、河井町川端丁",
+    "lat": 37.39591197551919,
+    "lon": 136.89981521447046
   },
   {
     "id": "bldg_0001",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町川端丁"
+    "municipality": "石川県、輪島市、河井町川端丁",
+    "lat": 37.396041186551216,
+    "lon": 136.89985172973022
   },
   {
     "id": "bldg_0002",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町川端丁"
+    "municipality": "石川県、輪島市、河井町川端丁",
+    "lat": 37.39616920584034,
+    "lon": 136.8998079701221
   },
   {
     "id": "bldg_0003",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町川端丁"
+    "municipality": "石川県、輪島市、河井町川端丁",
+    "lat": 37.39625359615326,
+    "lon": 136.89983235758206
   },
   {
     "id": "bldg_0004",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町森の下"
+    "municipality": "石川県、輪島市、河井町森の下",
+    "lat": 37.39558324712069,
+    "lon": 136.8999987253408
   },
   {
     "id": "bldg_0005",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町川端丁"
+    "municipality": "石川県、輪島市、河井町川端丁",
+    "lat": 37.396077998594066,
+    "lon": 136.9001732805813
   },
   {
     "id": "bldg_0006",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町森の下"
+    "municipality": "石川県、輪島市、河井町森の下",
+    "lat": 37.39572393811625,
+    "lon": 136.9001998867782
   },
   {
     "id": "bldg_0007",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町森の下"
+    "municipality": "石川県、輪島市、河井町森の下",
+    "lat": 37.395525974330305,
+    "lon": 136.90020160730901
   },
   {
     "id": "bldg_0008",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町森の下"
+    "municipality": "石川県、輪島市、河井町森の下",
+    "lat": 37.3958737287103,
+    "lon": 136.90023767566996
   },
   {
     "id": "bldg_0009",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町森の下"
+    "municipality": "石川県、輪島市、河井町森の下",
+    "lat": 37.39590774899292,
+    "lon": 136.9000884215757
   },
   {
     "id": "bldg_0010",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町川端丁"
+    "municipality": "石川県、輪島市、河井町川端丁",
+    "lat": 37.396125133909145,
+    "lon": 136.90031264602138
   },
   {
     "id": "bldg_0011",
     "text": "Building destroyed. Hazard: fire. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、河井町川端丁"
+    "municipality": "石川県、輪島市、河井町川端丁",
+    "lat": 37.39635583693028,
+    "lon": 136.89989231452486
   },
   {
     "id": "bldg_0012",
     "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）",
+    "lat": 37.394786684670734,
+    "lon": 136.89576732685896
   },
   {
     "id": "bldg_0013",
     "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）",
+    "lat": 37.39493037045534,
+    "lon": 136.89583299374382
   },
   {
     "id": "bldg_0014",
     "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）",
+    "lat": 37.39513819377622,
+    "lon": 136.89590727068295
   },
   {
     "id": "bldg_0015",
     "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）",
+    "lat": 37.39486625130369,
+    "lon": 136.89589481294541
   },
   {
     "id": "bldg_0016",
     "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）",
+    "lat": 37.39494378191536,
+    "lon": 136.89592587735925
   },
   {
     "id": "bldg_0017",
     "text": "Building survived. Hazard: seismic only. MMI 8.4 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）"
+    "municipality": "石川県、輪島市、鳳至町上町南（小学校前）",
+    "lat": 37.39539248357382,
+    "lon": 136.8960253156104
   },
   {
     "id": "bldg_0018",
     "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Evidence: single-source assessment.",
-    "municipality": "石川県、珠洲市、三崎町"
+    "municipality": "石川県、珠洲市、三崎町",
+    "lat": 37.49541494120881,
+    "lon": 137.34643974970442
   },
   {
     "id": "bldg_0019",
     "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Evidence: single-source assessment.",
-    "municipality": "石川県、珠洲市、三崎町"
+    "municipality": "石川県、珠洲市、三崎町",
+    "lat": 37.492628964,
+    "lon": 137.34283072799997
   },
   {
     "id": "bldg_0020",
     "text": "Building destroyed. Hazard: tsunami. MMI 8.8 (severe shaking). Evidence: multi-source assessment.",
-    "municipality": "石川県、珠洲市、上戸町"
+    "municipality": "石川県、珠洲市、上戸町",
+    "lat": 37.43042647356652,
+    "lon": 137.2554634749157
   },
   {
     "id": "bldg_0021",
     "text": "Building destroyed. Hazard: tsunami. MMI 8.6 (severe shaking). Evidence: single-source assessment.",
-    "municipality": "石川県、珠洲市、三崎町"
+    "municipality": "石川県、珠洲市、三崎町",
+    "lat": 37.49551485107918,
+    "lon": 137.3465185220705
   },
   {
     "id": "bldg_0022",
     "text": "Building survived. Hazard: tsunami. MMI 8.4 (severe shaking). Evidence: single-source assessment.",
-    "municipality": "石川県、能登町、字四方山"
+    "municipality": "石川県、能登町、字四方山",
+    "lat": 37.33827642839841,
+    "lon": 137.26616604294378
   },
   {
     "id": "bldg_0023",
     "text": "Building survived. Hazard: tsunami. MMI 8.4 (severe shaking). Evidence: single-source assessment.",
-    "municipality": "石川県、能登町、字立壁"
+    "municipality": "石川県、能登町、字立壁",
+    "lat": 37.339683361338636,
+    "lon": 137.26569316648877
   }
 ]

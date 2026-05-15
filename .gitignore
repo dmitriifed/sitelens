@@ -106,6 +106,7 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+.streamlit/secrets.toml
 
 # ============================================================================
 # SiteLens-specific
