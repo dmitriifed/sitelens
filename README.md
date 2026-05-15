@@ -1,5 +1,7 @@
 # SiteLens AI — Building Damage Assessment Copilot
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://sitelens.streamlit.app/)
+
 > A multimodal building damage assessment pipeline: classifies per-building damage from aerial imagery using a CV model evaluated against peer-reviewed ground-truth labels from the 2024 Noto earthquake, and generates structured inspection reports using a language model.
 
 **Status:** Capstone project in active development. Developers Institute GenAI & Machine Learning Bootcamp, 2026 cohort. Target completion: 14 June 2026.
@@ -21,11 +23,13 @@ The demonstration target is the Wajima Asaichi morning market district. On 1 Jan
 
 - [x] Layer-0: GSI orthophoto fetcher (`data/fetch_gsi_tiles.py`)
 - [x] Layer-0: Polygon-orthophoto overlay validation (`data/overlay_damage.py`)
+- [x] Layer-2: Semantic retrieval (Pinecone + sentence-transformers)
+- [x] Layer-3: Rule-based field assessment narrative
+- [x] Layer-5: Abstractive cross-summary (distilbart-cnn-12-6)
+- [x] Interactive demo (Streamlit) — https://sitelens.streamlit.app/
 - [ ] Layer-1: Per-building crop extractor
 - [ ] Layer-1: Baseline CNN damage classifier
 - [ ] Layer-1: Per-building evaluation pipeline
-- [ ] Layer-2: Inspection report generator (LLM)
-- [ ] Layer-3: Interactive demo (Gradio)
 
 ## Dataset and attribution
 
@@ -49,7 +53,7 @@ sitelens/
 ├── model/                      (training and evaluation)
 ├── pipeline/                   (end-to-end inference)
 ├── report/                     (LLM report generation)
-└── app/                        (Gradio demo)
+└── app/                        (Streamlit demo)
 ```
 
 ## Context
