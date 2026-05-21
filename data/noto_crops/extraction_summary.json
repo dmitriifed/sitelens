@@ -1,0 +1,33 @@
+{
+  "run_timestamp_utc": "2026-05-20T13:33:46.166088+00:00",
+  "git_commit": "e3e3767",
+  "script": "pipeline/extract_crops.py",
+  "inputs": {
+    "gpkg": "C:\\Users\\admin\\Documents\\GitHub\\SensingRisk\\sitelens\\data\\raw\\Noto_Peninsula_Damage_2_5.gpkg",
+    "raster": "C:\\Users\\admin\\Documents\\GitHub\\SensingRisk\\sitelens\\pipeline\\gsi_output\\mosaic_20240102noto_wazimanaka_0111do_z18.tif",
+    "raster_crs": "EPSG:4326",
+    "raster_bounds": [
+      136.89376831054688,
+      37.39307301476917,
+      136.90338134765625,
+      37.39961910867559
+    ]
+  },
+  "parameters": {
+    "target_size": 64,
+    "context_pad": 0.25,
+    "resampling": "bilinear",
+    "squarify_mode": "pixel_space"
+  },
+  "counts": {
+    "polygons_in_extent": 2084,
+    "dropped_damage_val_9": 2,
+    "dropped_damage_val_99": 37,
+    "skipped_edge_or_lowvar": 51,
+    "crops_written": 1994
+  },
+  "class_balance": {
+    "survived": 1558,
+    "destroyed": 436
+  }
+}

@@ -139,3 +139,6 @@ model/weights/*.onnx
 # Data directories (keep the directories themselves, but ignore their contents)
 data/raw/
 data/processed/
+
+# Crop images (large, generated — metadata CSVs and summary JSON are committed)
+data/noto_crops/all/

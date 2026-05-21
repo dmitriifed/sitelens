@@ -20,6 +20,8 @@ This log is the bootcamp-scoped parallel to the Sensing Risk decisions log. The 
 
 **Initial setup note (May 10 2026).** Repository lives on the founder's personal GitHub, under personal credentials, with the school added as collaborator only if and when needed for grading. Default license MIT. This is the standard bootcamp portfolio path and what the curriculum's GitHub Student Pack module assumes.
 
+**Provenance-by-default discipline (May 20 2026).** Every pipeline stage emits (a) a per-run summary JSON capturing inputs, parameters, code version (git commit), and counts; (b) per-record metadata sufficient to trace each output back to its source inputs and the transformation parameters used. Filenames are deterministic from source IDs. Sanity-check displays surface source IDs alongside output. Established at `pipeline/extract_crops.py` (Layer-1 crop extractor): `extraction_summary.json` records the git commit, timestamp, GPKG and raster paths, CRS, all extraction parameters, and the full count chain from polygons-in-extent to crops-written; `labels.csv` carries `s_fid`, centroid coordinates, polygon WKT, and pixel-space window parameters for every crop. The audit layer at the top of the gradient is only as strong as the traceability discipline at every layer beneath it.
+
 ---
 
 ## 2. Scope discipline
@@ -101,6 +103,13 @@ A target F1 > 0.6 for image-only binary classification (destroyed vs. survived) 
 
 This means catch-up happens by forward motion, with one short evening review (60–90 min) of the relevant lecture notebook before each dependent week. Two evening reviews total: one this week (Week 7 BERT/embeddings, before the Week 8 vector DB project), one before Week 11 starts (Week 6 CNN training).
 
+**Catch-up status (18 May 2026).**
+
+- *Week 7 BERT / embeddings:* paid down implicitly through the Week 8 hackathon. Sentence-transformers, vector DB, and RAG are now operational knowledge rather than lecture material. No formal revisit needed.
+- *Week 6 CNN training:* banked evening of 18 May 2026. Anchored against the bootcamp's cats-vs-dogs notebook roadmap as a direct Week 11 capstone template. Concepts covered: convolution and parameter sharing, pooling and translational invariance, ReLU and output activations (sigmoid vs softmax), binary cross-entropy + Adam, overfitting diagnostics, dropout + data augmentation + L2 regularization, class imbalance handling. Transfer learning (MobileNetV2 / ResNet50) deferred to Wed 20 May 2026 for hands-on resolution once crops are loadable.
+
+Both evening reviews from the original catch-up commitment are now complete. Forward motion is unblocked.
+
 **Week-to-deliverable mapping.**
 
 | Week | Dates (Sun–Thu) | Bootcamp topic | SiteLens project deliverable |
@@ -157,11 +166,47 @@ Regurgitation with repeated phrases and no aggregation. Diagnosis: general-domai
 - *Output rigidity* — finite if/elif tree. Loosens with fine-tuned generation (capstone fine-tuning question).
 - *Domain rigidity* — Vescovo schema only. Loosens highest-leverage by ingesting free-form documents (Vescovo paper PDF, MLIT damage manuals).
 
+### Week 9 (May 17–21): prompt engineering / multi-audience translation
+
+**Pre-work — Layer 1 crop extractor (18 May 2026).** Built `pipeline/extract_crops.py`. Layer 1 data preparation for the Week 11 capstone. Walks the Vescovo GPKG, crops each building polygon from the GSI Wajima orthophoto, writes per-building PNG plus a labels CSV in `flow_from_dataframe` shape. 2,045 valid crops extracted from 2,084 polygons in raster extent. 37 + 2 ambiguous labels dropped (damage_val 9 obstructed and 99 inconsistent per schema).
+
+**Concepts applied:**
+
+- *Geo stack and CRS alignment.* GeoPandas (vector) + Rasterio (raster) with explicit CRS assertion before any geometry math. Both files are EPSG:4326 so the assertion passes; the discipline of asserting is more important than the specific result.
+- *Spatial filter pushed to the file driver.* `bbox=` argument on `read_file()` — no Python loop over 140k polygons just to discard most.
+- *World ↔ pixel conversion via `from_bounds()`.* Rasterio's `windows` module converts world bbox to pixel window using the raster's affine transform.
+- *Context padding.* 25% of larger side around each polygon. Buildings need context (neighbours, debris field, street) for damage classification; tight crops lose signal.
+- *Squarify in pixel space, not world space.* Load-bearing engineering finding. At Wajima (≈37.4°N), `transform.a` (longitude degrees per pixel) is ≈1.26× larger than `transform.e` (latitude degrees per pixel) because the GSI orthophoto preserves ground distance, not degree size. Squarifying in world coordinates therefore produces a 0.80:1 pixel rectangle, squashing horizontal features by ≈20% before resize. Fix: compute the unsquared pixel window with `from_bounds()`, then extend the shorter pixel dimension to match the longer. Output is genuinely square in pixels and represents genuinely square ground area.
+- *Edge-fill / low-variance filtering.* `boundless=True` returns black-filled pixels for polygons at the raster edge; some polygons near the coast capture mostly water. Filter at extract time: skip crops where >20% of pixels are exactly zero OR overall pixel std < 10. Skipped crops logged separately to `extraction_skipped.csv` so the audit record is preserved rather than silently dropped.
+- *MMI as carried-but-not-used.* `USGS_MMI = 8.4` is constant across all Wajima buildings (ShakeMap pixel coarser than raster extent). Column retained in `labels.csv` despite zero predictive variance in this dataset because (a) it varies once the dataset extends beyond Wajima, (b) it varies across multi-event futures (Kumamoto, Tohoku), (c) the CNN takes images only so the column does not affect training, (d) re-extracting later costs more than carrying it now.
+
+**Provenance discipline applied to Layer 1.** Per the new §1 entry in the Sensing Risk decisions log, the extractor emits:
+- `labels.csv` with per-crop provenance: `s_fid`, filepath, centroid lon/lat, polygon WKT, pixel window (col_off, row_off, width, height), all source metadata (municipality, hazard flags, MMI, conf).
+- `extraction_summary.json` with per-run provenance: run timestamp UTC, git commit, input paths and CRS, parameters used (TARGET_SIZE, CONTEXT_PAD, resampling, squarify_mode), counts (polygons in extent, dropped per reason, skipped per reason, crops written), class balance.
+- Filenames `bldg_<s_fid:06d>.png` deterministic from source ID.
+- Sanity-grid titles surface `s_fid` and centroid lon/lat so any visually-suspicious crop is one CSV lookup away from its source polygon.
+
+**Sanity-check outcomes.** Stratified 6-destroyed + 6-survived grid confirms label-image consistency. Destroyed crops show debris fields and fragmented rooflines; survived crops show intact rectangular roofs. One edge-fill / coastal water crop visible in the pre-filter grid; the variance filter eliminates these on re-run.
+
+**Open for Wednesday 20 May 2026:**
+- Transfer learning vs train-from-scratch architecture decision. Recommend transfer learning (MobileNetV2 pretrained, frozen base, retrained head) on empirical grounds — small dataset typically favours it.
+- Class imbalance ratio in Wajima crops (destroyed:survived) — confirm after current run, decide between class weights at training time vs stratified subsampling at extract time.
+
+**Audience-translation build (Tue–Thu 19–21 May 2026).** [Placeholder — to be populated as the build proceeds. Maps directly onto SR decisions log §4 voice-localisation extension: same canonical record, multiple downstream audience registers. Target three audiences first — insurance adjuster, structural engineer, legal counsel — as the moat-spanning stress test.]
+
 ---
 
 ## 7. Evaluation discipline
 
-*Locked before Week 11. Confusion matrix per damage class, weighted vs unweighted F1, train/val/test split discipline, class-imbalance handling, held-out test set protection, baseline-vs-model comparison framing.*
+**Pre-Week-11 commitments (18 May 2026):**
+
+- *Report per-class F1, precision, recall, and confusion matrix — not accuracy.* The class imbalance in Vescovo (destroyed is a small minority of 140,208 buildings) makes accuracy uninformative. A model with 95% accuracy that catches 30% of destroyed buildings is useless for triage; a model with 80% accuracy that catches 90% of destroyed buildings is the product. Per-class metrics are the only honest report.
+
+- *Track model F1 and Vescovo human-on-human F1 separately.* The §4 honest-framing discipline applies: every published number includes both, never conflated. Expected model F1 in the 0.6–0.75 range for image-only binary classification at 64×64; that is a defensible result and the honest one. Quoting Vescovo's 0.94 as the model number is the single most damaging move available.
+
+- *AUC as a complementary monitoring metric during training.* AUC is threshold-independent and more honest than accuracy on imbalanced data. Default monitoring set: training loss, validation loss, validation AUC, validation per-class F1.
+
+*The full evaluation harness — confusion matrix visualisation, train/val/test split discipline, held-out test set protection, baseline-vs-model comparison framing — locks in Week 11 against the actual capstone model.*
 
 ---
 
@@ -249,6 +294,16 @@ sitelens/
 - Project virtual environment switch (May 2026). Migrated from global Python env to `.venv` in repo, curated `requirements.txt` reflecting actual deployed dependencies (drops stale `pinecone-client` for `pinecone`, removes commented-out future-week placeholders). Prerequisite for predictable Streamlit Cloud deploys and Week 11 CV dependency isolation.
 
 - Evidence-class axis (surfaced 13 May 2026, hackathon Day 1). The layered gradient (raw → retrieval → narrative → audit) is the *structural* axis. There is an orthogonal *epistemic* axis the system does not yet track: each datum is one of *conclusive/definitive* (e.g. Vescovo damage label, peer-reviewed measurement), *cross-referential/supportive* (e.g. similarity score, hazard-zone overlay, multi-source agreement), or *subjective/personified* (e.g. inspector field note, witness statement). Both axes matter independently. A definitive record at the raw layer is treated differently from a subjective record at the audit layer; the current system collapses the second axis. For Week 11+: data model should carry an `evidence_class` field; UI should surface class (colour, label, qualifier). Parallel to consular/legal/intelligence systems (documents vs cross-references vs interview); deck's Slide C has a related but distinct framework (citation-strength classes A–D for external sources). Worth a structured exploration before Week 11 capstone scope is locked.
+
+**Closures (18 May 2026):**
+
+- *LLM choice for Week 9 report generator — closed.* Distilbart-cnn-12-6 retained at Layer 5 (generalist cross-summary, local, deterministic, demo-day robust). Candidate Gemini 1.5 Flash to be A/B tested Wed 20 May 2026 at the new audience-translation layer (Layer 6), where audience-specific semantic understanding matters more than reproducibility. Likely outcome: split-stack — local model at Layer 5 for cross-summary, remote model at Layer 6 for audience translation, with a Demo-Day graceful-degradation fallback if remote quota or network fails.
+
+- *Multi-input senior summary — closed, reframed.* Subsumed into the audience-translation build as one audience among many (the senior coordinator is one of the seven downstream audiences identified in the Sensing Risk decisions log §4 voice-localisation extension). The feature is delivered as a special case of the general translation pattern: same prompt scaffolding, longer input bundle (5–10 assessments rather than one). No separate UI plumbing.
+
+**New open question (18 May 2026):**
+
+- *Transfer learning vs train-from-scratch for the Week 11 capstone classifier.* Decision deferred to Wed 20 May 2026 once first crops are loadable and a baseline can be run. Default recommendation: transfer learning (MobileNetV2 pretrained on ImageNet, frozen base, retrained Dense + Dropout + Sigmoid head on Noto crops). Decision criteria: (a) per-class F1 on a small validation split with 10 epochs of each approach, (b) training time per epoch, (c) ease of explanation in the capstone presentation. Pragmatic instinct: transfer learning wins on small datasets, but train-from-scratch may produce a more interpretable story for the bootcamp evaluator.
 
 ---
 
