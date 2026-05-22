@@ -116,10 +116,17 @@ Both evening reviews from the original catch-up commitment are now complete. For
 |---|---|---|---|
 | 8  | May 10–14 | NLP, vector databases, RAG | Inspection-precedent retrieval prototype (Pinecone + sentence-transformers) |
 | 9  | May 17–21 | Prompt engineering, open-source LLMs | Inspection report generator: structured record → narrative report |
-| 10 | May 24–28 | Agentic AI, MCP | Optional thin agent (bbox in → report out). Held loosely; consolidation/recovery time if 8–9 ran hot. |
+| 10 | May 24–28 | Agentic AI, MCP | Thin agent (bbox in → report out) + Streamlit audience dropdown + CV warm-up baseline on Wajima crops |
 | 11 | May 31–Jun 4 | Capstone build (scope due Mon Jun 1) | CV classifier on Noto crops + scene-level pipeline + per-class F1 evaluation |
 | 12 | Jun 7–11 | Capstone build (submit Thu Jun 11) | Gradio demo + README + presentation deck |
 | 13 | Jun 14 | Demo Day (Sun morning) | Present |
+
+**Week 10 plan, sharpened (19 May 2026).**
+
+- *Sun–Mon 24–25 May 2026:* thin agent — bbox-in → report-out wrapper over the existing audience translator, Streamlit audience dropdown, multi-record case (senior-coordinator audience as one of many per the SR §4 voice-localisation extension). Half day total. Delivers Week 10's curriculum requirement (agentic AI / MCP) without expanding scope.
+- *Tue–Thu 26–28 May 2026:* CV warm-up against the 2,045 Wajima crops. Load `labels.csv` into a `flow_from_dataframe` generator. Define the small CNN from the cats-vs-dogs template at 64×64. Run 5 epochs from scratch and 5 epochs with MobileNetV2 transfer learning. Plot per-class F1, training-vs-validation loss, AUC. Goal: a baseline number in hand before Week 11 starts, so the capstone build is iteration not from-zero.
+
+The original Week 10 framing as "held loosely / consolidation/recovery time if 8–9 ran hot" no longer holds — both halves of the week are now productive. The thin agent is genuinely thin because the audience translator does the heavy lifting.
 
 **Workweek discipline.** Israeli Sunday-to-Thursday workweek. Mornings: bootcamp lectures (exploratory learning). Afternoons: SiteLens building (project synthesis). Friday–Saturday: weekend, protected for rest by default. As deadlines approach (especially Weeks 11–12), some weekend work is acceptable but not expected as baseline.
 
@@ -192,7 +199,28 @@ Regurgitation with repeated phrases and no aggregation. Diagnosis: general-domai
 - Transfer learning vs train-from-scratch architecture decision. Recommend transfer learning (MobileNetV2 pretrained, frozen base, retrained head) on empirical grounds — small dataset typically favours it.
 - Class imbalance ratio in Wajima crops (destroyed:survived) — confirm after current run, decide between class weights at training time vs stratified subsampling at extract time.
 
-**Audience-translation build (Tue–Thu 19–21 May 2026).** [Placeholder — to be populated as the build proceeds. Maps directly onto SR decisions log §4 voice-localisation extension: same canonical record, multiple downstream audience registers. Target three audiences first — insurance adjuster, structural engineer, legal counsel — as the moat-spanning stress test.]
+**Audience-translation build (19 May 2026).** Built `src/translation/` package: `bundle.py` (input formatter + deterministic pre-computation of peril attribution and next-action), `prompts.py` (three system instructions + temperature config for insurance / engineering / legal), `audience_translator.py` (Gemini 2.5 Flash call site returning a provenance dict). Notebook `notebooks/week09_report_gen.ipynb` with three audience output cells and three sanity grids across three test records (fire-zone destroyed, seismic-only destroyed, survived).
+
+**LLM choice — resolved to Gemini 2.5 Flash via the new `google.genai` SDK.** The newer SDK with `genai.Client()` is the actively maintained path; the older `google.generativeai` package is legacy. Gemini 2.5 Flash chosen over 1.5 Flash for better instruction-following at similar latency. Free-tier rate limit (~10 RPM) is the operational constraint; the sanity-grid notebook design caches results to stay within budget.
+
+**Architectural decision — guardrail accumulation discipline.** Load-bearing finding from the day. World-knowledge override emerged at the secondary-peril field: the model output "seismic" for fire-zone records because it knows the Noto 2024 event was an earthquake, regardless of constraint language asking it not to derive perils. Adding more constraint language would have masked the symptom. The fix moved peril attribution and next-action into `bundle.py` as deterministic functions; the LLM receives them as pre-computed facts in the input bundle. Its scope is register translation only.
+
+This split — rule-based logic at Layer 3 (deterministic), LLM at Layer 6 (register) — is now the discipline. Captured as a Sensing Risk principle in the decisions log §1 ("Guardrail accumulation as maintenance liability").
+
+**Bug surfaced and patched — peril attribution for survived buildings.** `_compute_perils` originally defaulted to "seismic" when no hazard flags were set, regardless of damage_val. For survived buildings, this produced internally contradictory output ("Damage classification: 損害なし; Primary peril: seismic"). Fixed by adding `damage_val == 0` short-circuit returning a "none (building survived)" sentinel, with one-line prompt updates per audience to render the sentinel in the audience's register. Documented as part of the broader principle: peril attribution is only meaningful for damaged buildings; the pipeline must encode this rather than relying on the model to infer it.
+
+**Status.** Insurance audience validated against a five-criterion sanity grid (J-PIC category, primary peril, secondary peril, evidence basis, next-action). Engineering and legal audiences drafted, sanity grids produce extracted-value tables, full pass/fail evaluation lock-in deferred to Wed 20 May 2026.
+
+**Open for Wednesday 20 May 2026.**
+- Build expected-value-vs-actual pass/fail harness for all three audiences. Legal at temperature 0.0 becomes a regression test for model-version drift.
+- Validate engineering and legal sanity grids at 100% pass on the three test records, or document specifically which criterion fails on which record.
+- LLM A/B test deferred or skipped given Gemini 2.5 Flash is working — re-open only if a specific failure mode surfaces that requires a different model.
+
+**Open for Streamlit integration (deferred to Week 10).**
+- Wire Layer 2 (Pinecone precedent retrieval) and Layer 3 (rule-based narrative) into the bundle. Currently `translate()` accepts `precedents` and `narrative` as optional arguments but the notebook does not pass them. The full bundle (precedents + narrative + audit metadata + computed perils) is what makes the translation read as senior-grade rather than single-record.
+- Add audience dropdown + "Generate report" button to the existing Streamlit demo at sitelens.streamlit.app.
+
+**Carries forward.** The deterministic-vs-register split now applies to every future Layer 6 call. The notebook's pass/fail harness pattern becomes the evaluation template for Week 11's CV classifier output and Week 12's demo deliverable.
 
 ---
 
@@ -304,6 +332,20 @@ sitelens/
 **New open question (18 May 2026):**
 
 - *Transfer learning vs train-from-scratch for the Week 11 capstone classifier.* Decision deferred to Wed 20 May 2026 once first crops are loadable and a baseline can be run. Default recommendation: transfer learning (MobileNetV2 pretrained on ImageNet, frozen base, retrained Dense + Dropout + Sigmoid head on Noto crops). Decision criteria: (a) per-class F1 on a small validation split with 10 epochs of each approach, (b) training time per epoch, (c) ease of explanation in the capstone presentation. Pragmatic instinct: transfer learning wins on small datasets, but train-from-scratch may produce a more interpretable story for the bootcamp evaluator.
+
+**Closures (19 May 2026).**
+
+- *LLM choice for Week 9 — closed.* Gemini 2.5 Flash via the new `google.genai` SDK with `Client()` pattern. Free-tier rate limit (~10 RPM) operational, manageable with notebook caching. The earlier "split-stack: local distilbart + remote Gemini" plan held — distilbart stays at Layer 5 for generalist cross-summary, Gemini at Layer 6 for audience translation.
+
+- *Multi-input senior summary — closed, reframed.* Delivered as the "senior coordinator" audience persona in the voice-localisation framework (per SR decisions log §4 extension). Multi-record input is handled by the same `translate()` function passing a record list rather than a single record; no separate UI plumbing or feature track.
+
+**New opens (19 May 2026).**
+
+- *Pass/fail harness validation for engineering and legal audiences.* Pattern designed Tuesday; lock-in deferred to Wed 20 May 2026.
+
+- *Layer 2 precedent + Layer 3 narrative wiring into audience bundle.* `translate()` already accepts the arguments; Streamlit integration in Week 10 is the natural moment to wire them up against the existing Pinecone retrieval and rule-based narrator.
+
+- *Evidence-class axis (carried open from Week 8 hackathon, 13 May 2026).* Still open. Becomes natural to surface when (a) the pass/fail harness has visibility into how the model treats single-source vs multi-source records, and (b) Streamlit display can colour-code records by class. Re-evaluate before Week 11 capstone scope is locked.
 
 ---
 
