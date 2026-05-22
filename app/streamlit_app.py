@@ -19,13 +19,16 @@ Run from the repo root:
     streamlit run app/streamlit_app.py
 """
 
+import html
 import os
 import re
+import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
 import folium
+import pandas as pd
 import streamlit as st
 from branca.element import MacroElement, Template
 from dotenv import load_dotenv
@@ -33,6 +36,9 @@ from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone
 from streamlit_folium import st_folium
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from src.translation.audience_translator import translate
 
 
 # --------------------------------------------------------------------------
@@ -48,6 +54,11 @@ try:
 except Exception:
     PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
     INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "sitelens")
+
+try:
+    os.environ["GEMINI_API_KEY"] = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    pass  # falls through to os.environ already set via .env
 EMBED_MODEL = "all-MiniLM-L6-v2"
 SUMMARISER_MODEL = "sshleifer/distilbart-cnn-12-6"
 
@@ -95,9 +106,34 @@ def get_summariser():
     return tokenizer, model
 
 
+@st.cache_data
+def load_labels() -> pd.DataFrame:
+    path = REPO_ROOT / "data" / "noto_crops" / "labels.csv"
+    return pd.read_csv(path, index_col="s_fid")
+
+
 # --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
+
+def hit_to_record(hit_id: str) -> dict | None:
+    df = load_labels()
+    if hit_id not in df.index:
+        return None
+    row = df.loc[hit_id]
+    return {
+        "s_fid":            hit_id,
+        "municipality":     str(row.get("municipality", "")),
+        "centroid_lat":     float(row.get("centroid_lat", 0)),
+        "centroid_lon":     float(row.get("centroid_lon", 0)),
+        "damage_val":       int(row.get("damage_val", 0)),
+        "conf":             str(row.get("conf", "single")),
+        "gsi_fire":         int(row.get("gsi_fire", 0)),
+        "gsi_tsunami":      int(row.get("gsi_tsunami", 0)),
+        "gsi_slope_failure":int(row.get("gsi_slope_failure", 0)),
+        "usgs_mmi":         float(row.get("usgs_mmi", 0)),
+    }
+
 
 def retrieve(query: str, top_k: int = 3):
     model = get_embed_model()
@@ -269,10 +305,14 @@ def make_legend_html(hits):
     """
 
 
-def build_map(hits):
+def build_map(hits, selected_id=None, map_center=None, map_zoom=None):
     geo_hits = [h for h in (hits or []) if h["metadata"].get("lat") and h["metadata"].get("lon")]
 
-    if geo_hits:
+    if map_center is not None and map_zoom is not None:
+        # Preserve user's current viewport (target selection, report generation)
+        center = map_center
+        zoom = map_zoom
+    elif geo_hits:
         lats = [h["metadata"]["lat"] for h in geo_hits]
         lons = [h["metadata"]["lon"] for h in geo_hits]
         center = (sum(lats) / len(lats), sum(lons) / len(lons))
@@ -309,15 +349,21 @@ def build_map(hits):
         else:
             color = "#888888"
 
+        is_selected = h["id"] == selected_id
+        lat = h["metadata"]["lat"]
+        lon = h["metadata"]["lon"]
+
         folium.CircleMarker(
-            location=[h["metadata"]["lat"], h["metadata"]["lon"]],
+            location=[lat, lon],
             radius=10,
-            color=color,
+            color="white" if is_selected else color,
+            fill_color=color,
             fill=True,
             fillOpacity=0.85,
-            weight=2,
+            weight=4 if is_selected else 2,
             popup=folium.Popup(
-                f"<b>{h['id']}</b><br/>Score: {h['score']:.2f}<br/>{text}",
+                f"<b style='font-size:12px'>{h['id']}</b><br/>"
+                f"Score: {h['score']:.2f}<br/><span style='font-size:11px'>{text}</span>",
                 max_width=300,
             ),
         ).add_to(m)
@@ -328,7 +374,7 @@ def build_map(hits):
         macro._template = Template(legend_html)
         m.get_root().add_child(macro)
 
-    return m
+    return m, center, zoom
 
 
 # --------------------------------------------------------------------------
@@ -339,6 +385,29 @@ st.set_page_config(
     page_title="SiteLens AI",
     layout="wide",
 )
+
+st.markdown("""
+<style>
+div[data-testid="stCode"] pre {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    overflow-x: hidden !important;
+}
+div[data-testid="stJson"] {
+    overflow-x: auto;
+}
+button[kind="primary"] {
+    background-color: #A41E1E !important;
+    border-color: #A41E1E !important;
+    color: white !important;
+}
+button[kind="primary"]:hover {
+    background-color: #8B1818 !important;
+    border-color: #8B1818 !important;
+    color: white !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 st.markdown(
     "<style>.block-container { padding-top: 1rem !important; padding-bottom: 0 !important; }</style>",
@@ -353,7 +422,48 @@ PANEL_HEIGHT = 800
 
 map_col, notes_col = st.columns([3, 2], gap="medium")
 
-# ---- NOTES COLUMN (single pass, native scrollable container) -------------
+# ---- MAP COLUMN — runs first so click state is ready when notes_col renders
+
+with map_col:
+    # On the forced rerun after ASSESS, map_data["center"] is stale (previous position).
+    # Pop the flag here so map_col knows to trust computed values, not map_data.
+    _fit_all_this_run = st.session_state.pop("_fit_all_run", False)
+    if _fit_all_this_run:
+        st.session_state.pop("map_center", None)
+        st.session_state.pop("map_zoom", None)
+
+    m, _computed_center, _computed_zoom = build_map(
+        st.session_state.get("hits"),
+        selected_id=st.session_state.get("layer6_target_id"),
+        map_center=st.session_state.get("map_center"),
+        map_zoom=st.session_state.get("map_zoom"),
+    )
+    map_data = st_folium(
+        m,
+        height=PANEL_HEIGHT,
+        returned_objects=[],
+        use_container_width=True,
+    )
+
+    # Persist viewport so REPORT and target-dropdown changes don't rezoom.
+    # Fit-all run: map_data is one run behind — trust computed values.
+    # Other runs: store only when map_data reports a position that differs from
+    # what we initialized (i.e. the user actually panned/zoomed).
+    _raw_center = (map_data or {}).get("center")
+    _raw_zoom   = (map_data or {}).get("zoom")
+    if _fit_all_this_run:
+        st.session_state["map_center"] = _computed_center
+        st.session_state["map_zoom"]   = _computed_zoom
+    elif _raw_center and _raw_zoom is not None:
+        _dlat, _dlng = _raw_center["lat"], _raw_center["lng"]
+        _clat, _clng = _computed_center
+        if (abs(_dlat - _clat) > 1e-9
+                or abs(_dlng - _clng) > 1e-9
+                or abs(float(_raw_zoom) - float(_computed_zoom)) > 0.1):
+            st.session_state["map_center"] = (_dlat, _dlng)
+            st.session_state["map_zoom"]   = _raw_zoom
+
+# ---- NOTES COLUMN --------------------------------------------------------
 
 with notes_col:
 
@@ -366,12 +476,22 @@ with notes_col:
         "Pinecone · distilbart-cnn."
     )
 
-    scenario_key = st.selectbox(
-        "Scenario",
-        list(SCENARIOS.keys()),
-        index=0,
-        label_visibility="collapsed",
-    )
+    scen_col, k_col, run_col = st.columns([3, 0.7, 1.4])
+    with scen_col:
+        scenario_key = st.selectbox(
+            "Scenario",
+            list(SCENARIOS.keys()),
+            index=0,
+            label_visibility="collapsed",
+        )
+    with k_col:
+        top_k = st.number_input(
+            "Top-k", min_value=1, max_value=10, value=3,
+            label_visibility="collapsed",
+        )
+    with run_col:
+        run = st.button("ASSESS", type="primary", use_container_width=True)
+
     if scenario_key != st.session_state.get("_prev_scenario"):
         st.session_state["_prev_scenario"] = scenario_key
         st.session_state["query_input"] = SCENARIOS[scenario_key]
@@ -387,15 +507,6 @@ with notes_col:
         label_visibility="collapsed",
     )
 
-    run_col, k_col = st.columns([2, 1])
-    with run_col:
-        run = st.button("Run assessment", type="primary", use_container_width=True)
-    with k_col:
-        top_k = st.number_input(
-            "Top-k", min_value=1, max_value=10, value=3,
-            label_visibility="collapsed",
-        )
-
     # ---- Retrieval -------------------------------------------------------
 
     if run and query.strip():
@@ -405,6 +516,10 @@ with notes_col:
         st.session_state["hits"] = hits
         st.session_state["timestamp"] = timestamp
         st.session_state["run_query"] = query
+        st.session_state.pop("layer6_result", None)
+        st.session_state.pop("layer6_target_id", None)
+        st.session_state["_fit_all_run"] = True  # tells map_col to discard stale map_data
+        st.rerun()
     elif run:
         st.warning("Please enter a description before running.")
         hits = None
@@ -416,7 +531,7 @@ with notes_col:
 
     # ---- Results (scrollable container) ----------------------------------
 
-    with st.container(height=PANEL_HEIGHT - 310, border=False):
+    with st.container(height=PANEL_HEIGHT - 260, border=False):
         if hits:
             st.markdown("**2 — Retrieved precedents**")
             for h in hits:
@@ -484,16 +599,90 @@ with notes_col:
                     "state, hazard, severity). Closer to NER/extraction than summarisation; an "
                     "encoder-decoder fine-tuned on inspector-report data would serve. Week 11+ work."
                 )
+            st.markdown("**6 — Audience translation**")
+            hit_ids = [h["id"] for h in hits]
+            default_target = st.session_state.get("layer6_target_id", hit_ids[0])
+            if default_target not in hit_ids:
+                default_target = hit_ids[0]
+
+            aud_col, tgt_col, gen_col = st.columns([2.5, 1.9, 1.4], vertical_alignment="bottom")
+            with aud_col:
+                audience = st.selectbox(
+                    "Audience",
+                    ["insurance", "engineering", "legal"],
+                    format_func=lambda x: {
+                        "insurance":   "Insurance adjuster (J-PIC)",
+                        "engineering": "Structural engineer",
+                        "legal":       "Legal counsel",
+                    }[x],
+                    key="layer6_audience",
+                    label_visibility="collapsed",
+                )
+            with tgt_col:
+                selected_target = st.selectbox(
+                    "Target",
+                    hit_ids,
+                    index=hit_ids.index(default_target),
+                    key="layer6_target_sel",
+                    label_visibility="collapsed",
+                )
+                st.session_state["layer6_target_id"] = selected_target
+            with gen_col:
+                run_report = st.button("REPORT", key="layer6_run", type="primary", use_container_width=True)
+            if run_report:
+                target_hit = next((h for h in hits if h["id"] == selected_target), hits[0])
+                target_record = {"id": target_hit["id"], **target_hit["metadata"]}
+                precedents = [
+                    {
+                        "id": h["id"],
+                        "label": "destroyed" if "destroyed" in h["metadata"]["text"].lower() else "survived",
+                        "similarity": h["score"],
+                    }
+                    for h in hits if h["id"] != target_hit["id"]
+                ][:3]
+                with st.spinner(f"Translating for {audience} audience..."):
+                    result = translate(
+                        record=target_record,
+                        audience=audience,
+                        precedents=precedents,
+                        narrative=narrative,
+                    )
+                st.session_state["layer6_result"] = result
+
+            if st.session_state.get("layer6_result"):
+                result = st.session_state["layer6_result"]
+                stale = result["record_s_fid"] != selected_target
+                opacity = "0.35" if stale else "1"
+                border_color = "#666" if stale else "#A41E1E"
+                st.markdown(
+                    f"""<div style="
+                        background: var(--secondary-background-color);
+                        color: var(--text-color);
+                        border-left: 3px solid {border_color};
+                        padding: 16px 20px;
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+                        font-size: 14px;
+                        line-height: 1.6;
+                        white-space: pre-wrap;
+                        word-wrap: break-word;
+                        border-radius: 4px;
+                        opacity: {opacity};
+                    ">{html.escape(result['output_text'])}</div>""",
+                    unsafe_allow_html=True,
+                )
+                if stale:
+                    st.caption(f"Report is for {result['record_s_fid']} — hit REPORT to regenerate.")
+                with st.expander("Translation audit"):
+                    st.json({
+                        "audience":     result["audience"],
+                        "model":        result["model"],
+                        "temperature":  result["temperature"],
+                        "record_s_fid": result["record_s_fid"],
+                        "user_content": result["user_content"],
+                    })
+
+            st.markdown("<div style='height: 80px'></div>", unsafe_allow_html=True)
+
         else:
             st.info("Pick a scenario or type a description above, then **Run assessment**.")
 
-# ---- MAP COLUMN ----------------------------------------------------------
-
-with map_col:
-    m = build_map(st.session_state.get("hits"))
-    st_folium(
-        m,
-        height=PANEL_HEIGHT,
-        returned_objects=[],
-        use_container_width=True,
-    )

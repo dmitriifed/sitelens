@@ -23,7 +23,6 @@ Primary peril: [fire / tsunami / slope_failure / seismic]
 Secondary peril: [from input]
 Evidence basis: [single-source / multi-source per Vescovo conf field]
 Recommended next-action: [field inspection / desk approval / further investigation]
-Audit reference: Vescovo et al. 2025 damage dataset; GSI hazard zone; USGS ShakeMap
 
 TONE
 Professional Japanese P&C register. Concise. Factual. No hedging on documented facts; appropriate hedging on inferred peril attribution when multiple hazards coincide."""
@@ -70,7 +69,6 @@ Documented hazard context: [hazard flags, MMI] (sources: GSI hazard layer; USGS 
 Source of attribution: [single-source / multi-source per Vescovo conf field]
 Statement classes used: [observed / inferred / attributed — enumerate which apply]
 Limitations: [enumerate explicitly]
-Audit reference: extraction summary file; run timestamp UTC; git commit; model version
 
 TONE
 Legal-precise. Maximally hedged on inference. Maximally specific on attribution. No rhetoric."""

@@ -52,5 +52,5 @@ def translate(
         "user_content": user_content,
         "output_text": response.text,
         # provenance fields for the audit chain
-        "record_s_fid": record["s_fid"],
+        "record_s_fid": record.get("s_fid") or record.get("id", "unknown"),
     }
