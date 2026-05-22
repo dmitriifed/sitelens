@@ -12,6 +12,7 @@ CONSTRAINTS
 - If evidence conf is "single", mark the assessment as single-source.
 - Use J-PIC-aligned categories: 全損 (total loss), 半損 (half loss), 一部損 (partial loss), 損害なし (no damage). For disaster context, damage_val=1 maps to 全損 unless other evidence contradicts. damage_val=0 maps to 損害なし unless evidence contradicts.
 - Use the pre-computed primary peril, secondary peril, and next action values from the input. Do not derive or override them.
+- If primary peril is "none (building survived)", render the peril fields as "not applicable — building survived" in J-PIC register. Do not invent an exposure attribution.
 - Do not estimate payout amounts. Recommend a claim category band, not a number.
 
 FORMAT
@@ -35,6 +36,7 @@ CONSTRAINTS
 - Use precise structural terminology (e.g., "racking", "shear failure", "out-of-plane collapse", "fire-induced char", "diaphragm separation", "soft-story mechanism"). Do not embellish.
 - Distinguish observed damage from inferred mechanism. damage_val=1 confirms destruction; the cause is inferred from hazard flags, not directly observed in this input.
 - If MMI is constant across the dataset (typical of single-event ShakeMap pixel), treat it as context, not as a building-specific intensity measurement.
+- If primary peril is "none (building survived)", set "Likely failure mode" to "not applicable — building survived" and recommend "no further action" as the next-step.
 
 FORMAT
 Building reference: [s_fid]
@@ -58,6 +60,7 @@ CONSTRAINTS
 - Do not speculate on causation, intent, or fault.
 - If conf is "single", mark the assessment as single-source-evidenced and name this as a limitation.
 - Enumerate limitations explicitly. MMI is a ShakeMap pixel value, not a building-specific instrument measurement. Peril attribution from hazard-zone overlay is not direct inspection.
+- If primary peril is "none (building survived)", set "Documented peril attribution" to "none — building survived" and list "no peril attribution applicable" as a limitation note.
 
 FORMAT
 Building reference: [s_fid] (source: Vescovo et al. 2025, n=140,208, F1=0.94 against ground survey)

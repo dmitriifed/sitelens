@@ -23,11 +23,15 @@ def _compute_next_action(record: dict) -> str:
 
 
 def _compute_perils(record: dict) -> tuple[str, str]:
-    """Return (primary_peril, secondary_peril) from hazard flags.
+    """Return (primary_peril, secondary_peril) from hazard flags + damage_val.
 
-    Deterministic priority: fire > tsunami > slope_failure > seismic.
-    Seismic is the fallback when no explicit flag is set; it cannot be secondary.
+    Peril attribution is only meaningful for damaged buildings. For
+    survived buildings, return a sentinel that the prompts render
+    audience-appropriately ("not applicable", "none documented", etc.).
     """
+    if record["damage_val"] == 0:
+        return "none (building survived)", "none (building survived)"
+
     active = [p for p in _PERIL_PRIORITY if record.get(_PERIL_FLAGS[p])]
     if not active:
         return "seismic", "none indicated"
