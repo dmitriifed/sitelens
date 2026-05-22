@@ -1,3 +1,6 @@
+# PyTorch CPU-only wheel index — keeps deployment size ~200 MB instead of ~2.3 GB
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 # Core
 streamlit>=1.50,<2.0
 streamlit-folium>=0.20.0
