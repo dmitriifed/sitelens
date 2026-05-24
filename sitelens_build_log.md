@@ -1,6 +1,6 @@
 # SiteLens AI — build log
 
-Last updated: project initialised, sections 1–5 drafted, sections 6–8 scaffolded for week-by-week population.
+Last updated: Week 10 consolidation — §6 class-deck audit findings appended to Week 9; Week 10 block added (simplification pass, thin agent, CV warm-up, n8n, article-decisions setup); §10 closures (22–24 May) and new opens added. 24 May 2026.
 
 This document captures every load-bearing decision for the SiteLens AI bootcamp build. It exists so any future working session, code review, or portfolio reference can pick up exactly where we left off without re-debating settled questions. Read in full before starting a new session; treat as authoritative until explicitly revised.
 
@@ -222,6 +222,45 @@ This split — rule-based logic at Layer 3 (deterministic), LLM at Layer 6 (regi
 
 **Carries forward.** The deterministic-vs-register split now applies to every future Layer 6 call. The notebook's pass/fail harness pattern becomes the evaluation template for Week 11's CV classifier output and Week 12's demo deliverable.
 
+**Class-deck audit findings (22 May 2026).** Audit of the Week 9 implementation against the Developers Institute Week 16 prompt-engineering class deck (David / Developers Institute, "Engineering Predictable AI," May 2026, 33 slides).
+
+*Aligned with class guidance.* Three-role split (System / User / Assistant) used correctly in `audience_translator.py` via `system_instruction` and `contents`. Temperature discipline matches "0 for code, slightly higher for human-read" — 0.0 legal, 0.2 insurance, 0.3 engineering. Structural grounding via "every fact in your output must be supported by the input data" enforced as a constraint, not as tone language. Source provision via the bundle formatter is complete: target record, retrieved precedents, Layer 3 narrative, audit metadata.
+
+*Real gaps identified.*
+
+- *No few-shot examples in any prompt.* All three audiences run zero-shot. The class is explicit: "the model copies your example more carefully than your words." Adding 1–2 hand-drafted exemplar outputs per audience would tighten format adherence and reduce reliance on the model's interpretation of the FORMAT block. Sized as ~2 hours per audience.
+- *`max_tokens` not set in `audience_translator.py`.* One-line oversight. Per the class: "a prompt without max_tokens is a runaway bill — and a frozen UI." Currently constrained only by the prompt's policy ("Be concise"). Should be enforced. Sized as 1 line.
+- *No explicit escape hatch.* The class recommends a "NOT_IN_SOURCE"-equivalent — an instruction that lets the model say "I don't have this" rather than fabricate. Direct cause of the Week 9 audit-reference fabrication finding: the model invented `[git commit hash]` and `2024-07-30T12:00:00Z` because it had no legal way to signal absent values. Fix: one bullet per CONSTRAINTS block — "If a value required by the FORMAT is not present in the input, write [UNAVAILABLE]. Do not invent placeholder text or example values." Sized as 30 minutes total across three prompts.
+
+*Not applicable to current scope.* Tools, multi-turn assistant history, long-horizon compaction, U-curve management — single-turn audience translation does not exercise these. Re-examine for the Week 10 thin agent build (which is multi-step and may exercise tools).
+
+Implementation of the three gaps lands in Week 10 simplification pass (see §6 Week 10 entry below).
+
+### Week 10 (May 24–28): thin agent + CV warm-up + simplification before features
+
+**Simplification pass — pre-thin-agent (Sun 24 May 2026 AM).** Code is starting to splay: six numbered layers, two corpora that don't share IDs, three external services, and ~700 LOC across `src/` and `app/`. Before any new feature work, four straight-to-point moves that net *reduce* the codebase:
+
+1. *Pre-compute the audit reference in `bundle.py` and remove the corresponding line from each audience prompt's FORMAT block.* Closes the audit-reference fabrication issue and removes a CONSTRAINTS bullet per prompt. Estimated 1 hour.
+2. *Add `max_tokens` to `audience_translator.py` per the class-deck audit.* One line. Estimated 5 minutes.
+3. *Add an explicit escape hatch (`[UNAVAILABLE]` instruction) to every audience CONSTRAINTS block.* Estimated 30 minutes across three prompts.
+4. *Add one or two few-shot examples per audience prompt.* The class-deck audit's largest single gap. Estimated 2 hours per audience for hand-drafted exemplars validated against the existing pass/fail harness.
+5. *Replace Layer 5 distilbart with Gemini Flash at temperature 0.3.* Currently downloads ~300MB on cold-start, occupies memory, slows first interaction. Gemini already in the stack for Layer 6; reusing it eliminates one model dependency, no model download, no transformers/torch in runtime. The Layer 5 cross-summary becomes another `translate()`-style call with a fifth "senior coordinator" persona. The architecture note in the Streamlit Layer 5 expander (about t5-rejection) stays as a teaching artefact — the claim that *abstractive ML belongs at Layer 5, not Layer 3* is still true; only the model used changes. Estimated 1 hour.
+6. *Unify the corpora — re-index Pinecone against `labels.csv` (the 2,045-record corpus).* Eliminates the schema-resilient `.get()` defaults in `bundle.py` because every retrieved record will have every field. Removes a category of "field X not found" bugs at the seam. Estimated half day.
+
+These six moves net *reduce* the codebase: fewer files (no distilbart loader), fewer defensive branches (no schema-resilient `.get()`), fewer prompt CONSTRAINTS bullets (no audit-reference handling). Right direction before adding the thin agent on top.
+
+**Thin agent build (Mon 25 May 2026).** Bbox-in → report-out wrapper over the existing audience translator. The audience translator does the heavy lifting; the agent is the wrapper. Multi-record case (senior-coordinator audience as one of many per the §4 voice-localisation extension) folded in as the agent's natural multi-record path. Streamlit click-on-marker target selection closes the dropdown-only interaction loop. Delivers Week 10's curriculum requirement (agentic AI / MCP) without scope expansion.
+
+**CV warm-up (Tue–Thu 26–28 May 2026).** Load `data/noto_crops/labels.csv` into `flow_from_dataframe`. Baseline small CNN at 64×64 from the cats-vs-dogs template (per the 18 May CNN recap). Run 5 epochs from scratch with class weights; 5 epochs with MobileNetV2 transfer learning. Plot per-class F1 and AUC. Goal: a baseline number in hand before Week 11 capstone build proper, so the capstone is iteration not from-zero.
+
+**n8n workshop.** Candidate problem entering the workshop: orchestration of the procedural-to-AI image pipeline for the article (see SR §11 article workstream). Workshop teaches n8n primitives regardless; if n8n fits the candidate problem, build the pipeline post-Demo-Day with it. If it doesn't fit, the workshop served its purpose and the pipeline runs as Python scripts.
+
+**Article-decisions journal setup (Sun 24 May 2026 evening, 30 min).** Create `/article/article_decisions.md` and capture initial framing decisions while fresh: title candidates, argument structure, reference list, parametric-visualization specification (per §1 upstream-justification entry's visual methodology subsection). No real article work — just capture so the framing doesn't get lost between now and post-Demo-Day.
+
+**Open for Wednesday 27 May 2026 (CV mid-week checkpoint).**
+- Transfer learning vs train-from-scratch architecture decision (deferred from Week 9). Decide on empirical grounds: per-class F1 on a small validation split, training time per epoch, ease of explanation in the capstone presentation.
+- Class imbalance ratio in Wajima crops — confirm after first training run, decide between class weights at training time vs stratified subsampling at extract time.
+
 ---
 
 ## 7. Evaluation discipline
@@ -346,6 +385,19 @@ sitelens/
 - *Layer 2 precedent + Layer 3 narrative wiring into audience bundle.* `translate()` already accepts the arguments; Streamlit integration in Week 10 is the natural moment to wire them up against the existing Pinecone retrieval and rule-based narrator.
 
 - *Evidence-class axis (carried open from Week 8 hackathon, 13 May 2026).* Still open. Becomes natural to surface when (a) the pass/fail harness has visibility into how the model treats single-source vs multi-source records, and (b) Streamlit display can colour-code records by class. Re-evaluate before Week 11 capstone scope is locked.
+
+**Closures (22–24 May 2026).**
+
+- *LLM choice for Week 9 report generator — confirmed.* Gemini 2.5 Flash via the new `google.genai` SDK. Free-tier rate limit (~10 RPM) operational. Distilbart at Layer 5 to be replaced with Gemini Flash during Week 10 simplification pass (entry above) — completes the rationalisation of LLM-model dependencies to one provider, two temperatures.
+- *Audit-reference fabrication identified — fix scoped.* The legal-audience output's `Audit reference:` line fabricated `[git commit hash]` and `2024-07-30T12:00:00Z` because the model had no legal way to signal absent values. Same class of failure as the secondary-peril world-knowledge override from Tue 19 May. Fix scheduled in Week 10 simplification pass: pre-compute audit reference in `bundle.py`, remove the line from prompts' FORMAT blocks.
+- *Two-corpus seam (Layer 1 labels.csv vs Layer 2 sample_records) — fix scoped.* Bridged via schema-resilient `.get()` patches in `bundle.py` for Week 9 demo; full unification deferred to Week 10 simplification pass (re-index Pinecone against `labels.csv`).
+- *Streamlit horizontal scroll — fixed.* Global CSS injection targeting `div[data-testid="stCode"] pre` with `white-space: pre-wrap` and `word-wrap: break-word`. Implemented in `streamlit_app.py` deploy 21 May 2026.
+
+**New opens (24 May 2026).**
+
+- *Architecture infographic for the layered pipeline.* Visual showing six layers, deterministic-vs-LLM call-outs per layer, provenance flow as a side rail, audience fan-out at Layer 6. Reusable asset for Demo-Day presentation, post-Demo-Day article, future Forge / partner conversations. Design system: deck-monochrome plus deep-red accent (#A41E1E), Inter typeface. Scheduled to draft Sun 24 May 2026 PM or Mon 25 May 2026 AM as a 1-hour artefact.
+- *Field-fast UX variant (per SR §1 entry on architecture-legible vs field-fast inversion).* Not built; not bootcamp scope. Logged for future product-roadmap awareness — Phase 1 deliverable for SR when partner pilot opens.
+- *Layer 2 / Layer 3 wiring into audience-translation bundle.* Currently `translate()` accepts the arguments but the notebook does not pass them. Streamlit integration on 21 May 2026 wires Layer 2 precedents and Layer 3 narrative; notebook still uses isolated `translate()` calls. Low-priority cleanup; notebook is for development not demo.
 
 ---
 
