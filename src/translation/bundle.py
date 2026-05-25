@@ -22,6 +22,14 @@ _PERIL_FLAGS = {
     "slope_failure": "gsi_slope_failure",
 }
 
+# Deterministic audit reference. Held constant across runs so temperature-0.0
+# outputs stay bit-identical for regression testing. Update on pipeline /
+# dataset / imagery version bumps only.
+_PIPELINE_VERSION = "SiteLens-v0.9-w10"
+_AUDIT_REFERENCE = (
+    f"{_PIPELINE_VERSION} / Vescovo2025 (DOI 10.5281/zenodo.11055711) / GSI 2024-01-11"
+)
+
 
 def _compute_next_action(record: dict) -> str:
     """Return the recommended next-action from damage_val alone."""
@@ -155,6 +163,7 @@ def format_bundle(
         parts.append(f"\nRULE-BASED NARRATIVE\n  {narrative}")
 
     parts.append("\nAUDIT METADATA")
+    parts.append(f"  audit_reference: {_AUDIT_REFERENCE}")
     parts.append("  damage labels: Vescovo et al. 2025 Noto Peninsula dataset")
     parts.append("                 n=140,208, F1=0.94 against ground survey (CC-BY 4.0)")
     parts.append("                 DOI 10.5281/zenodo.11055711")

@@ -41,6 +41,7 @@ def translate(
         config=types.GenerateContentConfig(
             system_instruction=cfg["system_prompt"],
             temperature=cfg["temperature"],
+            max_output_tokens=1024,
         ),
         contents=user_content,
     )
