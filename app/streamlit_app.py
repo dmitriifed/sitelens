@@ -29,6 +29,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import folium
+from folium.plugins import MarkerCluster
 import pandas as pd
 import streamlit as st
 from branca.element import MacroElement, Template
@@ -415,30 +416,20 @@ def build_map(hits, selected_id=None, map_center=None, map_zoom=None):
         prefer_canvas=True,
     )
 
-    # all buildings as a context layer; shown only when zoomed in (client-side toggle)
-    gj = folium.GeoJson(
-        all_buildings_geojson(),
+    # all buildings as a zoom-aware cluster: one bubble when far, individuals when close
+    cluster = MarkerCluster(
         name="all buildings",
-        marker=folium.CircleMarker(radius=3, fill=True),
-        style_function=lambda f: {"color": "#ffffff", "fillColor": "#ffffff",
-                                  "weight": 1.5, "fillOpacity": 0.25},   # white = contrast on aerial
-        highlight_function=lambda f: {"color": "#A41E1E", "weight": 2, "fillOpacity": 0.5},
-        tooltip=folium.GeoJsonTooltip(fields=["bldg"], aliases=[""], sticky=False),
+        options={"maxClusterRadius": 45, "disableClusteringAtZoom": 17,
+                 "showCoverageOnHover": False, "spiderfyOnMaxZoom": False},
     )
-    gj.add_to(m)
-
-    zoom_toggle = MacroElement()
-    zoom_toggle._template = Template(f"""
-    {{% macro script(this, kwargs) %}}
-        var _gj = {gj.get_name()}, _map = {m.get_name()};
-        function _toggleAll() {{
-            if (_map.getZoom() >= 15) {{ if (!_map.hasLayer(_gj)) _gj.addTo(_map); }}
-            else {{ if (_map.hasLayer(_gj)) _map.removeLayer(_gj); }}
-        }}
-        _map.on('zoomend', _toggleAll); _toggleAll();
-    {{% endmacro %}}
-    """)
-    m.get_root().add_child(zoom_toggle)
+    cluster.add_to(m)
+    for feat in all_buildings_geojson()["features"]:
+        lon, lat = feat["geometry"]["coordinates"]
+        folium.CircleMarker(
+            location=[lat, lon], radius=3, weight=1.5,
+            color="#ffffff", fill=True, fill_color="#ffffff", fill_opacity=0.4,
+            tooltip=feat["properties"]["bldg"],
+        ).add_to(cluster)
 
     for h in geo_hits:
         text = h["metadata"]["text"]
