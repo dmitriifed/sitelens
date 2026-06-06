@@ -566,6 +566,14 @@ with map_col:
 
 # ---- NOTES COLUMN --------------------------------------------------------
 
+def _clear_query():
+    if st.session_state.get("bldg_input", 0) > 0:
+        st.session_state["query_input"] = ""
+
+def _clear_bldg():
+    if st.session_state.get("query_input", "").strip():
+        st.session_state["bldg_input"] = 0
+
 with notes_col:
 
     # ---- Input (always visible, not inside scrollable container) ----------
@@ -596,10 +604,12 @@ with notes_col:
     if scenario_key != st.session_state.get("_prev_scenario"):
         st.session_state["_prev_scenario"] = scenario_key
         st.session_state["query_input"] = SCENARIOS[scenario_key]
+        st.session_state["bldg_input"] = 0
 
     bldg_num = st.number_input(
         "Pick a building number (optional — overrides the description)",
-        min_value=0, max_value=len(load_display()), value=0, step=1,
+        min_value=0, max_value=len(load_display()), step=1,
+        key="bldg_input", on_change=_clear_query,
         help="Type a Bldg number from the map to assess that exact building and its "
              "neighbours. Leave at 0 to use the description below.",
     )
@@ -607,6 +617,7 @@ with notes_col:
     query = st.text_area(
         "Description / query",
         key="query_input",
+        on_change=_clear_bldg,
         height=80,
         placeholder=(
             "e.g. 'Two-storey timber-frame, roof partially collapsed, "
