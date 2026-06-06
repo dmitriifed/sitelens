@@ -120,6 +120,26 @@ def load_predictions() -> dict:
     return df.to_dict("index")   # {s_fid: {true_label, pred_prob, pred_label}}
 
 
+@st.cache_data
+def load_display() -> dict:
+    """Readable label parts per building, keyed by string s_fid.
+    Stable 'Bldg N' from sorted s_fid; municipality + coords for context."""
+    df = pd.read_csv(REPO_ROOT / "data" / "noto_crops" / "labels.csv", dtype={"s_fid": str})
+    df["_n"] = pd.to_numeric(df["s_fid"], errors="coerce")
+    df = df.sort_values(["_n", "s_fid"]).reset_index(drop=True)
+    out = {}
+    for i, row in df.iterrows():
+        parts = str(row.get("municipality", "")).strip().split("、")
+        city  = parts[1] if len(parts) >= 2 else (parts[0] if parts else "Noto")
+        out[str(row["s_fid"])] = {"bldg": i + 1, "muni": city or "Noto"}
+    return out
+
+
+def display_name(s_fid: str) -> str:
+    info = load_display().get(str(s_fid))
+    return f"{info['muni']} · Bldg {info['bldg']:04d}" if info else f"Bldg {s_fid}"
+
+
 # --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
@@ -392,10 +412,11 @@ def build_map(hits, selected_id=None, map_center=None, map_zoom=None):
             fillOpacity=0.85,
             weight=4 if is_selected else 2,
             popup=folium.Popup(
-                f"<b style='font-size:12px'>{h['id']}</b><br/>"
+                f"<b style='font-size:12px'>{display_name(h['id'])}</b><br/>"
                 f"Score: {h['score']:.2f}<br/>"
                 f"<span style='font-size:11px'>{text}</span>"
-                f"{pred_html}",
+                f"{pred_html}"
+                f"<br/><span style='font-size:10px;color:#999;'>{lat:.4f}, {lon:.4f} · ref {h['id']}</span>",
                 max_width=300,
             ),
         ).add_to(m)
@@ -567,7 +588,7 @@ with notes_col:
         if hits:
             st.markdown("**2 — Retrieved precedents**")
             for h in hits:
-                header = f"[{h['score']:.2f}] {h['id']} — {h['metadata']['text']}"
+                header = f"[{h['score']:.2f}] {display_name(h['id'])} — {h['metadata']['text']}"
                 with st.expander(header):
                     st.json(h["metadata"])
 
@@ -655,6 +676,7 @@ with notes_col:
                     "Target",
                     hit_ids,
                     index=hit_ids.index(default_target),
+                    format_func=display_name,
                     key="layer6_target_sel",
                     label_visibility="collapsed",
                 )
@@ -703,7 +725,7 @@ with notes_col:
                     unsafe_allow_html=True,
                 )
                 if stale:
-                    st.caption(f"Report is for {result['record_s_fid']} — hit REPORT to regenerate.")
+                    st.caption(f"Report is for {display_name(result['record_s_fid'])} — hit REPORT to regenerate.")
                 with st.expander("Translation audit"):
                     st.json({
                         "audience":     result["audience"],
