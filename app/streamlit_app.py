@@ -140,6 +140,40 @@ def display_name(s_fid: str) -> str:
     return f"{info['muni']} · Bldg {info['bldg']:04d}" if info else f"Bldg {s_fid}"
 
 
+@st.cache_data
+def all_buildings_geojson() -> dict:
+    """All buildings as one GeoJSON layer (cheap to serialise vs N markers)."""
+    df = load_labels().reset_index()
+    disp = load_display()
+    feats = []
+    for _, row in df.iterrows():
+        sid = str(row["s_fid"])
+        lat, lon = float(row.get("centroid_lat", 0)), float(row.get("centroid_lon", 0))
+        if not lat or not lon:
+            continue
+        b = disp.get(sid, {}).get("bldg")
+        feats.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lon, lat]},
+            "properties": {"bldg": f"Bldg {b:04d}" if b else sid},
+        })
+    return {"type": "FeatureCollection", "features": feats}
+
+
+@st.cache_data
+def bldg_index() -> dict:
+    """Reverse map: building number -> s_fid."""
+    return {info["bldg"]: sid for sid, info in load_display().items()}
+
+
+def retrieve_by_id(s_fid: str, top_k: int = 4):
+    """Anchor building + nearest neighbours via Pinecone query-by-id.
+    matches[0] is normally the anchor itself (self-match, score ~1.0)."""
+    index = get_pinecone_index()
+    res = index.query(id=str(s_fid), top_k=top_k, include_metadata=True)
+    return res["matches"]
+
+
 # --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
@@ -373,7 +407,20 @@ def build_map(hits, selected_id=None, map_center=None, map_zoom=None):
         tiles=GSI_TILE_URL,
         attr=GSI_ATTR,
         max_zoom=18,
+        prefer_canvas=True,
     )
+
+    # all buildings as a recessive context layer; retrieved markers sit on top
+    if zoom >= 14:
+        folium.GeoJson(
+            all_buildings_geojson(),
+            name="all buildings",
+            marker=folium.CircleMarker(radius=3, fill=True),
+            style_function=lambda f: {"color": "#9aa0a6", "fillColor": "#9aa0a6",
+                                      "weight": 1, "fillOpacity": 0.12},
+            highlight_function=lambda f: {"color": "#A41E1E", "weight": 2, "fillOpacity": 0.45},
+            tooltip=folium.GeoJsonTooltip(fields=["bldg"], aliases=[""], sticky=False),
+        ).add_to(m)
 
     for h in geo_hits:
         text = h["metadata"]["text"]
@@ -549,6 +596,13 @@ with notes_col:
         st.session_state["_prev_scenario"] = scenario_key
         st.session_state["query_input"] = SCENARIOS[scenario_key]
 
+    bldg_num = st.number_input(
+        "Pick a building number (optional — overrides the description)",
+        min_value=0, max_value=len(load_display()), value=0, step=1,
+        help="Type a Bldg number from the map to assess that exact building and its "
+             "neighbours. Leave at 0 to use the description below.",
+    )
+
     query = st.text_area(
         "Description / query",
         key="query_input",
@@ -562,7 +616,23 @@ with notes_col:
 
     # ---- Retrieval -------------------------------------------------------
 
-    if run and query.strip():
+    if run and bldg_num > 0:
+        sid = bldg_index().get(int(bldg_num))
+        if sid is None:
+            st.warning(f"Building {int(bldg_num)} not found.")
+            hits, timestamp = None, None
+        else:
+            timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            with st.spinner(f"Pulling {display_name(sid)} and its neighbours..."):
+                hits = retrieve_by_id(sid, top_k=top_k + 1)
+            st.session_state["hits"] = hits
+            st.session_state["timestamp"] = timestamp
+            st.session_state["run_query"] = f"[map selection] {display_name(sid)}"
+            st.session_state.pop("layer6_result", None)
+            st.session_state["layer6_target_id"] = sid
+            st.session_state["_fit_all_run"] = True
+            st.rerun()
+    elif run and query.strip():
         timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
         with st.spinner("Retrieving precedent records..."):
             hits = retrieve(query, top_k=top_k)
@@ -571,12 +641,11 @@ with notes_col:
         st.session_state["run_query"] = query
         st.session_state.pop("layer6_result", None)
         st.session_state.pop("layer6_target_id", None)
-        st.session_state["_fit_all_run"] = True  # tells map_col to discard stale map_data
+        st.session_state["_fit_all_run"] = True
         st.rerun()
     elif run:
-        st.warning("Please enter a description before running.")
-        hits = None
-        timestamp = None
+        st.warning("Enter a description or pick a building number before running.")
+        hits, timestamp = None, None
     else:
         hits = st.session_state.get("hits")
         timestamp = st.session_state.get("timestamp")
