@@ -2,7 +2,12 @@
 
 [![Live Demo](https://img.shields.io/badge/▶_Live_Demo-sitelens.streamlit.app-A41E1E?style=for-the-badge)](https://sitelens.streamlit.app/)
 
-[![SiteLens demo](docs/demo_screenshot.png)](https://sitelens.streamlit.app/)
+<a href="https://sitelens.streamlit.app/">
+  <img src="docs/wajima_hero.png" width="760"
+       alt="Wajima Asaichi market — per-building fire vs seismic damage attribution">
+</a>
+
+<sub>Wajima Asaichi market, Noto Peninsula — per-building fire (311) and seismic (131) damage attribution. Imagery: GSI. Damage labels: Vescovo et al. 2025 (CC-BY 4.0).</sub>
 
 > **SiteLens AI** turns post-event aerial imagery into per-building damage
 > assessments and audience-specific inspection reports. The training data is
