@@ -41,7 +41,12 @@ def translate(
         config=types.GenerateContentConfig(
             system_instruction=cfg["system_prompt"],
             temperature=cfg["temperature"],
-            max_output_tokens=1024,
+            max_output_tokens=2048,
+            # Thinking mode burns its token budget against max_output_tokens,
+            # leaving almost nothing for visible output. Structured format
+            # output doesn't benefit from chain-of-thought; disable it so
+            # max_output_tokens acts as the intended circuit breaker.
+            thinking_config=types.ThinkingConfig(thinking_budget=0),
         ),
         contents=user_content,
     )

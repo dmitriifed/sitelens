@@ -71,7 +71,9 @@ Documented condition: [destroyed / surviving / obstructed] (source: damage_val f
 Documented hazard context: [hazard flags, MMI] (sources: GSI hazard layer; USGS ShakeMap)
 Source of attribution: [single-source / multi-source per Vescovo conf field]
 Statement classes used: [observed / inferred / attributed — enumerate which apply]
-Limitations: [enumerate explicitly]
+Limitations:
+- [first limitation]
+- [second limitation — one bullet per limitation, minimum two]
 
 TONE
 Legal-precise. Maximally hedged on inference. Maximally specific on attribution. No rhetoric."""
