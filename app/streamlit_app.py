@@ -35,7 +35,6 @@ from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone
 from streamlit_folium import st_folium
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.translation.audience_translator import translate
@@ -60,7 +59,6 @@ try:
 except Exception:
     pass  # falls through to os.environ already set via .env
 EMBED_MODEL = "all-MiniLM-L6-v2"
-SUMMARISER_MODEL = "sshleifer/distilbart-cnn-12-6"
 
 SCENARIOS = {
     "(Free-form input)": "",
@@ -97,13 +95,6 @@ def get_pinecone_index():
     pc = Pinecone(api_key=PINECONE_API_KEY)
     return pc.Index(INDEX_NAME)
 
-
-@st.cache_resource
-def get_summariser():
-    """Layer-5 abstractive summariser. First load downloads ~300MB."""
-    tokenizer = AutoTokenizer.from_pretrained(SUMMARISER_MODEL)
-    model = AutoModelForSeq2SeqLM.from_pretrained(SUMMARISER_MODEL)
-    return tokenizer, model
 
 
 @st.cache_data
@@ -312,42 +303,24 @@ def stats_line(hits):
 
 
 def cross_summary(query: str, narrative: str, hits) -> str:
-    """
-    Layer-5 senior-coordinator synthesis.
-    Combines inspector free-form text + rule-based narrative + retrieved record texts
-    into a paragraph, then abstractively summarises with distilbart-cnn-12-6.
-    """
+    """Layer-5 senior-coordinator synthesis via Gemini 2.5 Flash."""
     if not hits or not query.strip():
         return ""
-
+    from google import genai
     record_texts = " ".join(h["metadata"]["text"] for h in hits)
-
-    input_text = (
-        f"Field inspection report. "
-        f"The inspector at the site observed: {query.strip()} "
-        f"System assessment: {narrative} "
-        f"Precedent buildings reviewed: {record_texts}"
+    prompt = (
+        "You are a senior inspection coordinator. In 2–3 sentences synthesise the "
+        "field report for a coordinator. Use only facts present; invent nothing.\n\n"
+        f"Inspector observed: {query.strip()}\n"
+        f"System assessment: {narrative}\n"
+        f"Precedent buildings: {record_texts}"
     )
-
-    tokenizer, model = get_summariser()
     try:
-        inputs = tokenizer(
-            input_text,
-            return_tensors="pt",
-            max_length=1024,
-            truncation=True,
-        )
-        outputs = model.generate(
-            inputs.input_ids,
-            max_length=80,
-            min_length=30,
-            num_beams=4,
-            length_penalty=2.0,
-            early_stopping=True,
-        )
-        return tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
-    except Exception as exc:  # noqa: BLE001 — defensive demo path
-        return f"_(Summary generation failed: {exc})_"
+        resp = genai.Client().models.generate_content(
+            model="gemini-2.5-flash", contents=prompt)
+        return resp.text.strip()
+    except Exception:
+        return narrative
 
 
 def make_legend_html(hits):
@@ -601,7 +574,7 @@ with notes_col:
     st.caption(
         "Layered retrieval-and-assessment pipeline for building damage inspection. "
         "Vescovo et al. 2025 Noto Peninsula dataset · sentence-transformers · "
-        "Pinecone · distilbart-cnn."
+        "Pinecone · Gemini 2.5 Flash."
     )
 
     scen_col, k_col, run_col = st.columns([3, 0.7, 1.4])
@@ -726,7 +699,7 @@ with notes_col:
 
             st.markdown("**5 — Senior coordinator summary**")
             st.caption(
-                f"Abstractive synthesis · {SUMMARISER_MODEL} · "
+                "Abstractive synthesis · Gemini 2.5 Flash · "
                 "may rephrase but does not invent facts not present in input"
             )
             with st.spinner("Synthesising summary..."):
@@ -748,11 +721,12 @@ with notes_col:
                     "Not specific to t5-small — BART or Pegasus would fail similarly *at this layer*. "
                     "Layer 3 stays rule-based: deterministic, grounded, audit-ready.\n\n"
                     "**Above the narrative layer (Layer 5) — implemented.** "
-                    f"distilbart-cnn-12-6 synthesises the inspector's free-form input + the "
+                    "Gemini 2.5 Flash synthesises the inspector's free-form input + the "
                     "rule-based narrative + the retrieved record texts into a single coordinator "
                     "summary. The input is no longer all-templated — the inspector's own words give "
                     "the model real material to compress. This is the right architectural placement "
-                    "for abstractive ML in this pipeline.\n\n"
+                    "for abstractive ML in this pipeline. (Originally distilbart-cnn-12-6; moved to "
+                    "Gemini to stay within Streamlit Cloud's memory ceiling.)\n\n"
                     "**Below the input layer — out of hackathon scope.** "
                     "Parsing free-form inspector notes into structured field extraction (damage "
                     "state, hazard, severity). Closer to NER/extraction than summarisation; an "
