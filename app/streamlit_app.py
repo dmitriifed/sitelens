@@ -112,6 +112,14 @@ def load_labels() -> pd.DataFrame:
     return pd.read_csv(path, index_col="s_fid")
 
 
+@st.cache_data
+def load_predictions() -> dict:
+    """Pre-computed CNN outputs from model/evaluate.py. No model runs in the app."""
+    path = REPO_ROOT / "data" / "noto_crops" / "predictions.csv"
+    df = pd.read_csv(path, dtype={"s_fid": str}).set_index("s_fid")
+    return df.to_dict("index")   # {s_fid: {true_label, pred_prob, pred_label}}
+
+
 # --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
@@ -121,7 +129,7 @@ def hit_to_record(hit_id: str) -> dict | None:
     if hit_id not in df.index:
         return None
     row = df.loc[hit_id]
-    return {
+    record = {
         "s_fid":            hit_id,
         "municipality":     str(row.get("municipality", "")),
         "centroid_lat":     float(row.get("centroid_lat", 0)),
@@ -133,6 +141,13 @@ def hit_to_record(hit_id: str) -> dict | None:
         "gsi_slope_failure":int(row.get("gsi_slope_failure", 0)),
         "usgs_mmi":         float(row.get("usgs_mmi", 0)),
     }
+    pred = load_predictions().get(str(hit_id))
+    if pred is not None:
+        true_bin = int(record["damage_val"] > 0)
+        record["pred_label"]   = int(pred["pred_label"])
+        record["pred_prob"]    = float(pred["pred_prob"])
+        record["pred_correct"] = (int(pred["pred_label"]) == true_bin)
+    return record
 
 
 def retrieve(query: str, top_k: int = 3):
@@ -353,6 +368,21 @@ def build_map(hits, selected_id=None, map_center=None, map_zoom=None):
         lat = h["metadata"]["lat"]
         lon = h["metadata"]["lon"]
 
+        # pre-computed model call for this building (no model runs here)
+        pred = load_predictions().get(str(h["id"]))
+        pred_html = ""
+        if pred is not None:
+            names = {0: "survived", 1: "destroyed"}
+            p_label = int(pred["pred_label"])
+            gt = "destroyed" if "destroyed" in text.lower() else (
+                 "survived" if "survived" in text.lower() else None)
+            mark = "" if gt is None else (" ✓" if gt == names[p_label] else " ✗ miss")
+            pred_html = (
+                f"<br/><span style='font-size:11px;color:#555;'>"
+                f"Model: <b>{names[p_label]}</b> "
+                f"(P destroyed {float(pred['pred_prob']):.0%}){mark}</span>"
+            )
+
         folium.CircleMarker(
             location=[lat, lon],
             radius=10,
@@ -363,7 +393,9 @@ def build_map(hits, selected_id=None, map_center=None, map_zoom=None):
             weight=4 if is_selected else 2,
             popup=folium.Popup(
                 f"<b style='font-size:12px'>{h['id']}</b><br/>"
-                f"Score: {h['score']:.2f}<br/><span style='font-size:11px'>{text}</span>",
+                f"Score: {h['score']:.2f}<br/>"
+                f"<span style='font-size:11px'>{text}</span>"
+                f"{pred_html}",
                 max_width=300,
             ),
         ).add_to(m)
