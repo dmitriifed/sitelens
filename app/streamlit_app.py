@@ -166,12 +166,40 @@ def bldg_index() -> dict:
     return {info["bldg"]: sid for sid, info in load_display().items()}
 
 
-def retrieve_by_id(s_fid: str, top_k: int = 4):
-    """Anchor building + nearest neighbours via Pinecone query-by-id.
-    matches[0] is normally the anchor itself (self-match, score ~1.0)."""
-    index = get_pinecone_index()
-    res = index.query(id=str(s_fid), top_k=top_k, include_metadata=True)
-    return res["matches"]
+def _row_to_text(row) -> str:
+    outcome = "destroyed" if int(row["damage_val"]) > 0 else "survived"
+    haz = []
+    if int(row.get("gsi_fire", 0)):          haz.append("fire")
+    if int(row.get("gsi_tsunami", 0)):       haz.append("tsunami")
+    if int(row.get("gsi_slope_failure", 0)): haz.append("slope failure")
+    hazard = ", ".join(haz) if haz else "seismic only"
+    mmi = float(row.get("usgs_mmi", 0))
+    sev = "severe shaking" if mmi >= 8 else "strong shaking" if mmi >= 6 else "moderate shaking"
+    return (f"Building {outcome}. Hazard: {hazard}. "
+            f"MMI {mmi:.1f} ({sev}). Evidence: multi-source assessment.")
+
+
+def neighbours_by_distance(s_fid: str, k: int = 3):
+    """Anchor + its k spatially nearest buildings (centroid distance).
+    Hit-shaped; 'score' carries distance in metres (0 for the anchor)."""
+    import math
+    df = load_labels().reset_index()
+    df["s_fid"] = df["s_fid"].astype(str)
+    anchor = df[df["s_fid"] == str(s_fid)]
+    if anchor.empty:
+        return []
+    alat = float(anchor.iloc[0]["centroid_lat"]); alon = float(anchor.iloc[0]["centroid_lon"])
+    coslat = math.cos(math.radians(alat))
+    df = df.assign(_m=(((df["centroid_lat"] - alat)) ** 2
+                       + ((df["centroid_lon"] - alon) * coslat) ** 2) ** 0.5 * 111_320)
+    nearest = df.sort_values("_m").head(k + 1)
+    return [{
+        "id": str(r["s_fid"]),
+        "score": float(r["_m"]),
+        "metadata": {"text": _row_to_text(r),
+                     "lat": float(r["centroid_lat"]),
+                     "lon": float(r["centroid_lon"])},
+    } for _, r in nearest.iterrows()]
 
 
 # --------------------------------------------------------------------------
@@ -623,11 +651,12 @@ with notes_col:
             hits, timestamp = None, None
         else:
             timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
-            with st.spinner(f"Pulling {display_name(sid)} and its neighbours..."):
-                hits = retrieve_by_id(sid, top_k=top_k + 1)
+            with st.spinner(f"Pulling {display_name(sid)} and its nearest buildings..."):
+                hits = neighbours_by_distance(sid, k=top_k)
             st.session_state["hits"] = hits
             st.session_state["timestamp"] = timestamp
             st.session_state["run_query"] = f"[map selection] {display_name(sid)}"
+            st.session_state["retrieval_mode"] = "spatial"
             st.session_state.pop("layer6_result", None)
             st.session_state["layer6_target_id"] = sid
             st.session_state["_fit_all_run"] = True
@@ -639,6 +668,7 @@ with notes_col:
         st.session_state["hits"] = hits
         st.session_state["timestamp"] = timestamp
         st.session_state["run_query"] = query
+        st.session_state["retrieval_mode"] = "semantic"
         st.session_state.pop("layer6_result", None)
         st.session_state.pop("layer6_target_id", None)
         st.session_state["_fit_all_run"] = True
@@ -656,20 +686,27 @@ with notes_col:
     with st.container(height=PANEL_HEIGHT - 260, border=False):
         if hits:
             st.markdown("**2 — Retrieved precedents**")
+            mode = st.session_state.get("retrieval_mode", "semantic")
             for h in hits:
-                header = f"[{h['score']:.2f}] {display_name(h['id'])} — {h['metadata']['text']}"
+                tag = (("anchor" if h["score"] < 1 else f"{h['score']:.0f} m")
+                       if mode == "spatial" else f"{h['score']:.2f}")
+                header = f"[{tag}] {display_name(h['id'])} — {h['metadata']['text']}"
                 with st.expander(header):
                     st.json(h["metadata"])
 
             st.markdown("**3 — Field assessment**")
             narrative = narrative_sentence(hits)
             st.markdown(narrative)
-            avg_score = sum(h["score"] for h in hits) / len(hits)
-            st.caption(
-                f"Aggregated from {len(hits)} retrieved precedents · "
-                f"avg similarity {avg_score:.2f} · "
-                f"rule-based aggregation, no ML at this layer"
-            )
+            if mode == "spatial":
+                st.caption(f"Anchor + {len(hits)-1} nearest buildings by distance · "
+                           "rule-based aggregation, no ML at this layer")
+            else:
+                avg_score = sum(h["score"] for h in hits) / len(hits)
+                st.caption(
+                    f"Aggregated from {len(hits)} retrieved precedents · "
+                    f"avg similarity {avg_score:.2f} · "
+                    f"rule-based aggregation, no ML at this layer"
+                )
 
             st.markdown("**4 — Audit record**")
             with st.expander("View audit JSON"):
