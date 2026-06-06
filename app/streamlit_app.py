@@ -21,6 +21,7 @@ Run from the repo root:
 
 import html
 import os
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 import re
 import sys
 from collections import Counter
@@ -35,6 +36,9 @@ from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 from pinecone import Pinecone
 from streamlit_folium import st_folium
+
+from transformers.utils import logging as _hf_logging
+_hf_logging.disable_progress_bar()
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.translation.audience_translator import translate
@@ -411,17 +415,30 @@ def build_map(hits, selected_id=None, map_center=None, map_zoom=None):
         prefer_canvas=True,
     )
 
-    # all buildings as a recessive context layer; retrieved markers sit on top
-    if zoom >= 14:
-        folium.GeoJson(
-            all_buildings_geojson(),
-            name="all buildings",
-            marker=folium.CircleMarker(radius=3, fill=True),
-            style_function=lambda f: {"color": "#9aa0a6", "fillColor": "#9aa0a6",
-                                      "weight": 1, "fillOpacity": 0.12},
-            highlight_function=lambda f: {"color": "#A41E1E", "weight": 2, "fillOpacity": 0.45},
-            tooltip=folium.GeoJsonTooltip(fields=["bldg"], aliases=[""], sticky=False),
-        ).add_to(m)
+    # all buildings as a context layer; shown only when zoomed in (client-side toggle)
+    gj = folium.GeoJson(
+        all_buildings_geojson(),
+        name="all buildings",
+        marker=folium.CircleMarker(radius=3, fill=True),
+        style_function=lambda f: {"color": "#ffffff", "fillColor": "#ffffff",
+                                  "weight": 1.5, "fillOpacity": 0.25},   # white = contrast on aerial
+        highlight_function=lambda f: {"color": "#A41E1E", "weight": 2, "fillOpacity": 0.5},
+        tooltip=folium.GeoJsonTooltip(fields=["bldg"], aliases=[""], sticky=False),
+    )
+    gj.add_to(m)
+
+    zoom_toggle = MacroElement()
+    zoom_toggle._template = Template(f"""
+    {{% macro script(this, kwargs) %}}
+        var _gj = {gj.get_name()}, _map = {m.get_name()};
+        function _toggleAll() {{
+            if (_map.getZoom() >= 15) {{ if (!_map.hasLayer(_gj)) _gj.addTo(_map); }}
+            else {{ if (_map.hasLayer(_gj)) _map.removeLayer(_gj); }}
+        }}
+        _map.on('zoomend', _toggleAll); _toggleAll();
+    {{% endmacro %}}
+    """)
+    m.get_root().add_child(zoom_toggle)
 
     for h in geo_hits:
         text = h["metadata"]["text"]
