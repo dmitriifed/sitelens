@@ -1,6 +1,6 @@
 # SiteLens AI — build log
 
-Last updated: Week 10 consolidation — §6 class-deck audit findings appended to Week 9; Week 10 block added (simplification pass, thin agent, CV warm-up, n8n, article-decisions setup); §10 closures (22–24 May) and new opens added. 24 May 2026.
+Last updated: Week 10 simplification pass moves 1–3 landed Mon 25 May 2026 — all three audience harnesses at 100% pass, legal T=0.0 bit-identical confirmed, move-1 fabrication mode corrected; §10 closures updated. 25 May 2026.
 
 This document captures every load-bearing decision for the SiteLens AI bootcamp build. It exists so any future working session, code review, or portfolio reference can pick up exactly where we left off without re-debating settled questions. Read in full before starting a new session; treat as authoritative until explicitly revised.
 
@@ -32,13 +32,13 @@ A multimodal building damage assessment pipeline that:
 - Ingests aerial imagery (GSI orthophoto) for a defined bounding box.
 - Runs per-building classification against the Vescovo et al. 2025 ground-truth labels.
 - Generates a structured inspection report via a language model.
-- Demonstrates the pipeline through an interactive demo (Gradio or notebook).
+- Demonstrates the pipeline through an interactive Streamlit demo.
 
 **What SiteLens is not.**
 
 - Not a hardware product. The Sensing Risk module-first hardware thesis is referenced as motivation in the README; no hardware claims are made by SiteLens itself.
 - Not a real-time inference engine. Batch inference is acceptable; the demo can take seconds per building.
-- Not a production-grade web service. A local Gradio app or a clean notebook is the deliverable.
+- Not a production-grade web service. The Streamlit demo is the deliverable; it runs on Streamlit Community Cloud.
 - Not a Japanese-localised commercial product. The demonstration runs on Japanese data because that is where the validated ground truth is, but no claims are made about J-PIC schema compliance, MLIT alignment, or inspector-workflow integration. Those belong to Sensing Risk's later phases.
 - Not a peer-reviewed research contribution. The evaluation is rigorous and honest, but the deliverable is a portfolio piece, not a paper.
 
@@ -118,7 +118,7 @@ Both evening reviews from the original catch-up commitment are now complete. For
 | 9  | May 17–21 | Prompt engineering, open-source LLMs | Inspection report generator: structured record → narrative report |
 | 10 | May 24–28 | Agentic AI, MCP | Thin agent (bbox in → report out) + Streamlit audience dropdown + CV warm-up baseline on Wajima crops |
 | 11 | May 31–Jun 4 | Capstone build (scope due Mon Jun 1) | CV classifier on Noto crops + scene-level pipeline + per-class F1 evaluation |
-| 12 | Jun 7–11 | Capstone build (submit Thu Jun 11) | Gradio demo + README + presentation deck |
+| 12 | Jun 7–11 | Capstone build (submit Thu Jun 11) | README + presentation deck |
 | 13 | Jun 14 | Demo Day (Sun morning) | Present |
 
 **Week 10 plan, sharpened (19 May 2026).**
@@ -249,6 +249,8 @@ Implementation of the three gaps lands in Week 10 simplification pass (see §6 W
 
 These six moves net *reduce* the codebase: fewer files (no distilbart loader), fewer defensive branches (no schema-resilient `.get()`), fewer prompt CONSTRAINTS bullets (no audit-reference handling). Right direction before adding the thin agent on top.
 
+**Simplification pass — moves 1–3 landed (Mon 25 May 2026, pre-thin-agent).** Moves 1 (audit-reference pre-computation in `bundle.py`), 2 (`max_tokens` in `audience_translator.py`), and 3 (`[UNAVAILABLE]` escape hatch in all three CONSTRAINTS blocks) executed as planned. Post-patch harness run on the existing `test_records`: all three audiences (insurance / engineering / legal) at 100% pass. Legal at T=0.0 confirmed bit-identical to the pre-patch run — `audit_reference` is surfaced in the AUDIT METADATA section of `format_bundle()`, which the model reads as ambient context rather than a FORMAT slot to fill; the change populates a fact the model was previously self-extending, but does not alter the output token sequence for well-formed records. Bit-identical result also confirms moves 2 and 3 do not perturb legal-audience output for records where all required values are present. Moves 4–6 deferred; not required for the thin-agent build.
+
 **Thin agent build (Mon 25 May 2026).** Bbox-in → report-out wrapper over the existing audience translator. The audience translator does the heavy lifting; the agent is the wrapper. Multi-record case (senior-coordinator audience as one of many per the §4 voice-localisation extension) folded in as the agent's natural multi-record path. Streamlit click-on-marker target selection closes the dropdown-only interaction loop. Delivers Week 10's curriculum requirement (agentic AI / MCP) without scope expansion.
 
 **CV warm-up (Tue–Thu 26–28 May 2026).** Load `data/noto_crops/labels.csv` into `flow_from_dataframe`. Baseline small CNN at 64×64 from the cats-vs-dogs template (per the 18 May CNN recap). Run 5 epochs from scratch with class weights; 5 epochs with MobileNetV2 transfer learning. Plot per-class F1 and AUC. Goal: a baseline number in hand before Week 11 capstone build proper, so the capstone is iteration not from-zero.
@@ -337,7 +339,7 @@ sitelens/
 │   ├── generator.py                (Week 9 deliverable)
 │   └── prompts/
 └── app/
-    └── gradio_demo.py              (Week 12 deliverable)
+    └── streamlit_app.py            (live on Streamlit Community Cloud)
 ```
 
 **Run all pipeline scripts from the project root (`sitelens/`).** Relative paths in scripts resolve against CWD.
@@ -387,15 +389,45 @@ sitelens/
 **Closures (22–24 May 2026).**
 
 - *LLM choice for Week 9 report generator — confirmed.* Gemini 2.5 Flash via the new `google.genai` SDK. Free-tier rate limit (~10 RPM) operational. Distilbart at Layer 5 to be replaced with Gemini Flash during Week 10 simplification pass (entry above) — completes the rationalisation of LLM-model dependencies to one provider, two temperatures.
-- *Audit-reference fabrication identified — fix scoped.* The legal-audience output's `Audit reference:` line fabricated `[git commit hash]` and `2024-07-30T12:00:00Z` because the model had no legal way to signal absent values. Same class of failure as the secondary-peril world-knowledge override from Tue 19 May. Fix scheduled in Week 10 simplification pass: pre-compute audit reference in `bundle.py`, remove the line from prompts' FORMAT blocks.
+- *Audit-reference fabrication — closed (Mon 25 May 2026, Move 1).* Week 9 fabrication of `[git commit hash]` / `2024-07-30T12:00:00Z` was the model self-extending the AUDIT METADATA block in user content — neither prompt had an `Audit reference:` FORMAT slot nor a CONSTRAINTS bullet for it, so the failure mode was self-extension, not filling a specified slot. Fix: pre-computed `_AUDIT_REFERENCE` constant surfaced in `format_bundle()` AUDIT METADATA section; no FORMAT change required. Legal T=0.0 post-patch output is bit-identical to pre-patch — confirms `audit_reference` reads as ambient context, not a model-generated FORMAT field. Same failure class as the secondary-peril world-knowledge override (Tue 19 May): the model fills any gap in the structure it perceives; the fix is to leave no gap.
 - *Two-corpus seam (Layer 1 labels.csv vs Layer 2 sample_records) — fix scoped.* Bridged via schema-resilient `.get()` patches in `bundle.py` for Week 9 demo; full unification deferred to Week 10 simplification pass (re-index Pinecone against `labels.csv`).
 - *Streamlit horizontal scroll — fixed.* Global CSS injection targeting `div[data-testid="stCode"] pre` with `white-space: pre-wrap` and `word-wrap: break-word`. Implemented in `streamlit_app.py` deploy 21 May 2026.
+
+**Closures (25 May 2026).**
+
+- *Week 10 simplification pass, moves 1–3 — landed.* Audit-reference pre-computation (Move 1), `max_tokens` (Move 2), and `[UNAVAILABLE]` escape hatch (Move 3) executed pre-thin-agent. All three audience harnesses (insurance / engineering / legal) at 100% pass on existing `test_records`. Legal T=0.0 bit-identical to pre-patch. Moves 4–6 deferred pending thin-agent completion.
 
 **New opens (24 May 2026).**
 
 - *Architecture infographic for the layered pipeline.* Visual showing six layers, deterministic-vs-LLM call-outs per layer, provenance flow as a side rail, audience fan-out at Layer 6. Reusable asset for Demo-Day presentation, post-Demo-Day article, future Forge / partner conversations. Design system: deck-monochrome plus deep-red accent (#A41E1E), Inter typeface. Scheduled to draft Sun 24 May 2026 PM or Mon 25 May 2026 AM as a 1-hour artefact.
 - *Field-fast UX variant (per SR §1 entry on architecture-legible vs field-fast inversion).* Not built; not bootcamp scope. Logged for future product-roadmap awareness — Phase 1 deliverable for SR when partner pilot opens.
 - *Layer 2 / Layer 3 wiring into audience-translation bundle.* Currently `translate()` accepts the arguments but the notebook does not pass them. Streamlit integration on 21 May 2026 wires Layer 2 precedents and Layer 3 narrative; notebook still uses isolated `translate()` calls. Low-priority cleanup; notebook is for development not demo.
+
+**Week 11 — Layer-1 classifier complete (6 Jun 2026).**
+
+`model/train.py` and `model/evaluate.py` replaced placeholders with full production scripts. MobileNetV2 (ImageNet-pretrained, frozen backbone, single-logit head) trained on 1,967 deduplicated building crops from `data/noto_crops/all/`. Three fixes surfaced during first run and resolved before results were accepted:
+
+1. *CROPS_DIR path.* Placeholder assumed `data/noto_crops/crops/`; actual extraction output is `data/noto_crops/all/`. Corrected in `train.py` CONFIG block.
+2. *`s_fid` type mismatch.* `crop_path()` called `int(s_fid)` but `s_fid` values are compound strings (e.g. `20230303-49281-13461-s-7542`). Filenames are sequential integers assigned at extraction time, not derived from `s_fid`. Fixed by reading `filepath` column directly from `labels.csv` when present; `crop_path()` retained as fallback.
+3. *Duplicate `s_fid` rows — leakage risk.* `labels.csv` contained 27 duplicate building IDs. Per-row split without dedup put twin rows on opposite sides of train/test, inflating test-set size from 300 to 322 and exposing ~22 buildings to both training and evaluation. Fixed by `drop_duplicates(subset="s_fid")` in `load_labeled_frame()` before the split. Working set: 1,967 rows.
+
+**Evaluation results (leakage-free held-out test, n = 296, CPU, 30 epochs with patience 6):**
+
+| | precision | recall | F1 |
+|---|---|---|---|
+| survived | 0.919 | 0.983 | 0.950 |
+| destroyed | 0.918 | 0.692 | 0.789 |
+| **macro** | **0.919** | **0.837** | **0.870** |
+
+ROC-AUC 0.918. Class imbalance (~3.5:1) handled with `BCEWithLogitsLoss pos_weight` derived from the training split. Test split locked to `model/weights/test_split.csv` on first run; `evaluate.py` always scores the same buildings.
+
+Full-dataset predictions written to `data/noto_crops/predictions.csv` for demo wiring (pre-computed lookup; the Streamlit app loads no model live).
+
+*Honest framing enforced in output:* `evaluate.py` prints model F1 and Vescovo et al. 2025 ground-survey F1 = 0.94 side by side with an explicit label that they are different kinds of number. Never conflated.
+
+- *`torchvision` added to requirements.txt.* Missing from requirements despite being a direct dependency of `model/train.py` and `model/evaluate.py`. Installed as `torchvision 0.27.0+cpu`; `requirements.txt` updated to `torchvision>=0.15.0`.
+- *README overhauled.* New opening blurb, live-demo badge (deep-red, for-the-badge), Mermaid architecture diagram (deterministic vs model nodes colour-coded), Technical approach section with evaluation table and two-number framing, Status checklist updated to reflect all completed layers.
+- *Architecture diagram.* Mermaid flowchart committed to README — zero image-management overhead, GitHub-native rendering, version-controlled. Fulfils the reusable-asset log entry from 24 May 2026.
 
 ---
 

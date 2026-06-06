@@ -142,3 +142,7 @@ data/processed/
 
 # Crop images (large, generated — metadata CSVs and summary JSON are committed)
 data/noto_crops/all/
+
+# Logistics / planning docs (not repo artefacts)
+DevelopersInstitute_WeeklyTiming.pdf
+SiteLens AI*.md
