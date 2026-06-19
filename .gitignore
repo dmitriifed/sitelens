@@ -101,6 +101,7 @@ dmypy.json
 .AppleDouble
 .LSOverride
 Thumbs.db
+desktop.ini
 
 # Environment
 .env

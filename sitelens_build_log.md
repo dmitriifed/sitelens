@@ -88,7 +88,7 @@ A target F1 > 0.6 for image-only binary classification (destroyed vs. survived) 
 
 ## 5. Bootcamp alignment
 
-**Demo Day:** Sunday 14 June 2026, 09:30–11:30, morning slot.
+**Demo Day:** Thursday 11 June 2026 (actual presented date; the scheduled Sunday 14 June was superseded), 09:30–11:30, morning slot.
 
 **Capstone scope submission:** Week 11 Day 2 — Monday 1 June 2026 (public commitment to the build, after which scope is locked).
 
@@ -119,7 +119,7 @@ Both evening reviews from the original catch-up commitment are now complete. For
 | 10 | May 24–28 | Agentic AI, MCP | Thin agent (bbox in → report out) + Streamlit audience dropdown + CV warm-up baseline on Wajima crops |
 | 11 | May 31–Jun 4 | Capstone build (scope due Mon Jun 1) | CV classifier on Noto crops + scene-level pipeline + per-class F1 evaluation |
 | 12 | Jun 7–11 | Capstone build (submit Thu Jun 11) | README + presentation deck |
-| 13 | Jun 14 | Demo Day (Sun morning) | Present |
+| 13 | Jun 11 | Demo Day (Thu, same day as submission) | Present |
 
 **Week 10 plan, sharpened (19 May 2026).**
 
@@ -428,6 +428,53 @@ Full-dataset predictions written to `data/noto_crops/predictions.csv` for demo w
 - *`torchvision` added to requirements.txt.* Missing from requirements despite being a direct dependency of `model/train.py` and `model/evaluate.py`. Installed as `torchvision 0.27.0+cpu`; `requirements.txt` updated to `torchvision>=0.15.0`.
 - *README overhauled.* New opening blurb, live-demo badge (deep-red, for-the-badge), Mermaid architecture diagram (deterministic vs model nodes colour-coded), Technical approach section with evaluation table and two-number framing, Status checklist updated to reflect all completed layers.
 - *Architecture diagram.* Mermaid flowchart committed to README — zero image-management overhead, GitHub-native rendering, version-controlled. Fulfils the reusable-asset log entry from 24 May 2026.
+
+---
+
+**Week 12 — deployment hardening, UI, submission (7–11 Jun 2026).**
+
+- *Layer-5 summariser moved off distilbart.* distilbart-cnn-12-6 removed from the runtime; the Layer-5 abstractive-summary placement now routes through Gemini 2.5 Flash. This is what brought the deployed app under the Streamlit Community Cloud ~1 GB memory ceiling (no ~300 MB model download on cold start). The "ML summarisation placement" expander is retained in the app as a teaching artefact; the claim that abstractive ML belongs at Layer 5 not Layer 3 still holds, only the model changed. [Note: the earlier `SITELENS_LOCAL_ML` gating idea did not ship; `sentence-transformers`/MiniLM stays in the runtime because the live semantic path needs it. README line 102 still names distilbart and needs a one-line correction.]
+- *Dual retrieval confirmed live and parallel* (`streamlit_app.py` ~640–667, commit f6258ef). Building-number or map-click routes to a spatial path via `neighbours_by_distance()` over the local GeoDataFrame, scores in metres, no Pinecone. Free-text routes to a semantic path via all-MiniLM-L6-v2 against Pinecone, top-k cosine. Earlier "distance replaced Pinecone" notes were a misread; both modes ship.
+- *Welcome / landing page.* Single-session gated screen (`session_state["entered"]`): brand title, a what-it-does paragraph (Noto, GSI orthophotos + Vescovo labels), "Who it is for" (insurance / structural / legal), and a four-step "How to use it". Pinecone and the embed model are deliberately not initialised until the user clicks "Open the demo", so the landing paints fast and carries fewer cold-start failure surfaces; `st.stop()` after, so the app proper renders only post-entry.
+- *Map, two layers.* GSI tile base (attribution carried), fractional zoom, `prefer_canvas`. Layer one: all buildings as a `MarkerCluster` of faint white dots (tooltip = building number) that collapses to a bubble when far and breaks to individuals at zoom ≥ 17. Layer two: the assessed buildings drawn as footprint polygons via `folium.GeoJson` from `polygons.parquet` (`load_polygons()`), filled by damage colour (destroyed #A41E1E, survived #2A7A2A), the selected building outlined white and heavier, with a CircleMarker fallback when a footprint is missing. Per-building popup shows the readable name, retrieval score, record text, and the pre-computed model call (predicted label, P(destroyed), and a check/miss mark against the Vescovo ground-truth label). Adaptive auto-zoom from geographic spread (single building → 18, wider spreads step down toward 13), plus a rendered legend.
+- *Map-state handler.* `st_folium` is called with `returned_objects=[]` so folium interactions do not trigger Streamlit reruns. Viewport (centre/zoom) is persisted to session state only when the user actually pans or zooms, so generating a report or changing the target dropdown does not re-zoom. A `_fit_all_run` flag handles st_folium reporting a one-run-stale centre on the forced rerun after ASSESS, trusting computed values on that run. The map column renders before the notes column so click state is ready downstream.
+- *Inputs and routing.* Three reconciled entry points: a scenario-preset selectbox (picking one fills the query and zeroes the building number), a building-number input (overrides the description, resolved to `s_fid` via `bldg_index()`), and a free-text query. Mutual-exclusion callbacks (`_clear_query` / `_clear_bldg`) stop number and text competing; `top_k` (1–10) sets the target-plus-neighbours count; ASSESS is the single run trigger, routing the number path to `neighbours_by_distance()` and the text path to semantic retrieval.
+- *Audience and report controls (Layer 6).* After ASSESS, an audience selectbox (insurance / structural / legal), a target-building dropdown that sets `layer6_target_id` (which highlights that building white on the map), and a REPORT button that runs the Gemini audience translation for the selected record, with an audit panel exposing the underlying records.
+- *Cleanup pass.* Interface decluttered before Demo Day as general practice, removing redundant elements and tightening the layout so the structural gradient reads without noise.
+- *Layout — Route B.* Full-width map with the right-hand panel lifted to a translucent fixed overlay via `.st-key-sidepanel { position: fixed !important }` (the `!important` was the specificity fix) plus a JS `querySelector` hook. Brand title "Site" (white) + "Lens" (sensing red) as a reusable constant used on both the landing and demo screens; "AI" dropped from the header.
+- *README opening reframed* to lead with self-assembled data and multi-cause attribution (per Marina's "lead with unique contributions"). Data framed as self-assembled (paired and processed open sources), not self-collected.
+- *Repo.* Public. Two clean commits (translation layer, then Week 11 classifier + README). "claude" contributor attribution retained as appropriate for a GenAI programme. `app/gradio_demo.py` placeholder deleted; Streamlit Community Cloud is the deployment, Gradio dropped under deadline.
+- *DI scope form filed* (Octopus). Corrections at submission: crop count 1,967, F1 figures, FAISS = No, LoRA = No, Streamlit Community Cloud as deployment.
+
+**Demo Day (11 Jun 2026).**
+
+- Presented and submitted. Deployed app: sitelens.streamlit.app. Tutor feedback pending: bootcamp-side capstone review, plus a more detailed competency mapping on my side (expansion of `SiteLens_competency_mapping.md`).
+- Demo Day occurred Thu 11 Jun 2026, same day as submission. §5 and the §6 week-table corrected from the placeholder "Sunday 14 June".
+- Submission-form residuals at close: portfolio link and job-tracker link. Job tracker — Google Sheet created for immediate submission (10-column template), Huntr preferred long-term; HQ Architects R&D logged as first entry. Portfolio hosting undecided (Notion / Read.cv / GitHub Pages / Cargo / Framer); blocks any application that cites a portfolio link.
+- `SiteLens_competency_mapping.md` produced (supervised learning, RAG, embeddings, transformer inference, evaluation discipline, deployment mapped to artefacts) as evidence for the bootcamp homework-requirement appeal. [flagged for the item-2 adjustment pass.]
+
+**Demo Day deck (capstone presentation).**
+
+- Kept as a separate artefact from the Deploy-meetup venture deck; the capstone deck stays SiteLens-framed with Sensing Risk as motivation only, nothing overstated.
+- Structure (six-beat narrative from §8 as the spine, final-drafted against the live app): cover; a trajectory / dissipation-gradient slide (footer corrected from a leftover "Sensing Risk · DEPLOY 2 · 2026" to "SiteLens · DI · 2026", the naming-boundary catch); the pipeline slide (Pinecone RAG, confirmed accurate); the retrospective slide (SEMANTIC COLLAPSE, symbol 1.00); the two conceptual slides (irreducible-core / end-argument, and the developments-in-pale roadmap); and the Thanks slide (DI instructors + GenAI & ML cohort credit, contact block; "BOOTACMAP" typo caught and fixed).
+- Key findings as presented, separated and never conflated: image-only model F1 0.789 destroyed / 0.870 macro / ROC-AUC 0.918 (n = 296, leakage-free) against Vescovo 0.94 (human ground survey, n = 140,208); semantic collapse on templated descriptions (scores 1.00) drove the building-neighbour path to distance, which also matches how damage clusters physically; duplicate-`s_fid` leakage caught before results were accepted; fire-vs-seismic decomposition (311 fire / 131 seismic of 442 destroyed) as the multi-cause signal; deterministic peril attribution in the pipeline with the LLM confined to register translation; self-assembled GSI + Vescovo data as the honest origin story.
+- Delivery: full run-through against the deployed app; graceful-degradation fallback prepared in case Gemini quota or network failed live. Q&A note kept ready, why the semantic path is still live if a reviewer sees the pipeline slide and the retrospective slide together (both retrieval modes ship; the retrospective is scoped to the neighbour path only).
+- Rendered in the shared design system (Inter, operational-red #A41E1E for damage only, dissipating emphasis); token definitions live in the SR decisions log, not here.
+
+**Closures (Demo Day).**
+
+- *Two-corpus seam — closed.* Pinecone re-indexed against `labels.csv` via `pipeline/reindex_pinecone.py`; the schema-resilient `.get()` defaults in `bundle.py` are no longer load-bearing. (Supersedes the "deferred to Week 10 simplification pass" line in §10.)
+- *`max_tokens` — closed.* `max_output_tokens=2048` set in `audience_translator.py` as the runaway-cost circuit breaker.
+- *`[UNAVAILABLE]` escape hatch — closed.* Present in all three audience CONSTRAINTS blocks; the Week 9 audit-reference fabrication class of failure is addressed (audit reference pre-computed, no longer prompted).
+
+**Deferred (live for Sensing Risk / article, or carried as known gaps).**
+
+- *Few-shot exemplars — not done.* All three audience prompts remain zero-shot. The class-deck audit's largest single gap; carried open.
+- *Evidence-class axis* (definitive / supportive / subjective). Not built; carried to Sensing Risk Phase 2 and as an article candidate.
+- *Field-fast UX variant.* Route B's map-first overlay is a partial step; the full variant remains an SR Phase-1 item.
+- *Layer 2/3 notebook wiring.* Notebook still uses isolated `translate()` calls; Streamlit wires them. Low-priority cleanup, non-blocking.
+
+**Capstone status — provisionally closed, 11 Jun 2026.** Build, evaluation, deployment, README, and submission complete. Held provisional pending (1) Marina Wyss feedback, folded as dated patches not a rewrite, (2) bootcamp-side capstone review, and (3) my own competency-mapping expansion. The two-F1 honesty audit across README, deck, LinkedIn, CV, submission is the gate before final close; the README line-102 distilbart correction is the one known accuracy gap going in.
 
 ---
 
