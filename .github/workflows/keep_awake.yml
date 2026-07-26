@@ -1,66 +1,77 @@
 # .github/workflows/keep_awake.yml
 # Keeps the SiteLens Streamlit Community Cloud app from sleeping.
-# Light version: a scheduled HTTP ping. If the app still sleeps, switch to
-# the Playwright browser version at the bottom (it loads the page like a real
-# visitor, which Streamlit's sleep logic counts more reliably).
+#
+# The plain HTTP ping was tested and TIMED OUT against the sleeping app
+# (curl exit 47). Streamlit does not serve a bare request the way it serves a
+# real browser, so this version loads the page in a headless browser, clicks
+# the "get this app back up" button if the app is asleep, and waits for it to
+# come up. That registers as genuine activity and actually keeps it warm.
 
 name: keep-siteLens-awake
 
 on:
   schedule:
-    # Every 10 minutes. GitHub cron is UTC and best-effort; it may run a few
-    # minutes late under load, which is fine for keeping an app warm.
+    # Every 10 minutes. GitHub cron is UTC and best-effort; it can run late
+    # under load. That is fine for keeping an app warm.
     - cron: "*/10 * * * *"
-  workflow_dispatch: {}   # lets you run it manually from the Actions tab
+  workflow_dispatch: {}   # run manually from the Actions tab
 
 jobs:
-  ping:
+  browser-wake:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping the app
-        run: |
-          echo "Pinging SiteLens..."
-          code=$(curl -s -o /dev/null -w "%{http_code}" -L --max-time 60 https://sitelens.streamlit.app/)
-          echo "HTTP status: $code"
-          # Do not fail the job on a non-200; a sleeping app can return 3xx
-          # while it wakes. The point is to generate the request, not to gate.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-# ---------------------------------------------------------------------------
-# ROBUST FALLBACK (only if the light ping above does not keep it awake).
-# Delete the `ping` job above, or leave it, and enable this one instead by
-# removing the leading "# " on every line below. It launches a headless
-# browser and actually loads the page, waiting a few seconds so the Streamlit
-# session registers as real activity.
-#
-#  browser-wake:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Set up Node
-#        uses: actions/setup-node@v4
-#        with:
-#          node-version: "20"
-#      - name: Install Playwright
-#        run: |
-#          npm init -y
-#          npm install playwright
-#          npx playwright install --with-deps chromium
-#      - name: Load the app in a real browser
-#        run: |
-#          cat > wake.js <<'EOF'
-#          const { chromium } = require('playwright');
-#          (async () => {
-#            const browser = await chromium.launch();
-#            const page = await browser.newPage();
-#            await page.goto('https://sitelens.streamlit.app/', { waitUntil: 'networkidle', timeout: 90000 });
-#            // If Streamlit shows a "Yes, get this app back up" button when asleep, click it.
-#            try {
-#              const btn = page.getByText(/get this app back up/i);
-#              if (await btn.count()) { await btn.first().click(); }
-#            } catch (e) {}
-#            await page.waitForTimeout(8000);
-#            console.log('Loaded:', await page.title());
-#            await browser.close();
-#          })();
+      - name: Install Playwright + Chromium
+        run: |
+          npm init -y
+          npm install playwright
+          npx playwright install --with-deps chromium
+
+      - name: Load the app in a real browser
+        run: |
+          cat > wake.js <<'EOF'
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch();
+            const page = await browser.newPage();
+            try {
+              await page.goto('https://sitelens.streamlit.app/', {
+                waitUntil: 'domcontentloaded',
+                timeout: 120000
+              });
+            } catch (e) {
+              console.log('Initial load slow or errored, continuing to check for wake button:', e.message);
+            }
+
+            // If the app is asleep, Streamlit shows a button to bring it back.
+            // Text has varied ("Yes, get this app back up!", "get this app back up").
+            try {
+              const btn = page.getByRole('button', { name: /get this app back up/i });
+              if (await btn.count()) {
+                console.log('App was asleep. Clicking wake button.');
+                await btn.first().click();
+              } else {
+                console.log('No wake button found (app likely already awake).');
+              }
+            } catch (e) {
+              console.log('Wake-button check skipped:', e.message);
+            }
+
+            // Give it time to spin up and register the session as active.
+            await page.waitForTimeout(20000);
+            try {
+              console.log('Final page title:', await page.title());
+            } catch (e) {}
+            await browser.close();
+          })();
+          EOF
+          node wake.js
+        # Never let a slow wake fail the run; the request itself is the point.
+        continue-on-error: true
 #          EOF
 #          node wake.js
 # ---------------------------------------------------------------------------
