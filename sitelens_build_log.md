@@ -476,6 +476,17 @@ Full-dataset predictions written to `data/noto_crops/predictions.csv` for demo w
 
 **Capstone status — provisionally closed, 11 Jun 2026.** Build, evaluation, deployment, README, and submission complete. Held provisional pending (1) Marina Wyss feedback, folded as dated patches not a rewrite, (2) bootcamp-side capstone review, and (3) my own competency-mapping expansion. The two-F1 honesty audit across README, deck, LinkedIn, CV, submission is the gate before final close; the README line-102 distilbart correction is the one known accuracy gap going in.
 
+## 11. 2026-08-13
+
+- Watch layer specified: sitelens_watch.sh + systemd user timer (30 min)
+  on Fedora; UptimeRobot as the always-on external layer; escalation to
+  a headless page-load if plain GET does not register as Streamlit
+  activity. Pre-freeze surface checks: Pinecone index alive, Gemini
+  fallback fires, cold-session timing, README numbers match
+  0.789/0.870/0.918, GSI attribution visible, in-app stale stage-label
+  scan. Text-only patches allowed before freeze; no structural
+  redeploys.
+
 ---
 
 End of build log v0.
