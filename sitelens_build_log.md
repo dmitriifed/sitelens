@@ -54,7 +54,7 @@ A multimodal building damage assessment pipeline that:
 
 ## 3. Dataset and existing assets
 
-**Ground truth.** Vescovo, R. et al. (2025). Noto Peninsula 2024 earthquake building damage dataset. n = 140,208 buildings, F1 = 0.94 against ground survey, CC-BY 4.0. Zenodo DOI: 10.5281/zenodo.11055711.
+**Ground truth.** Vescovo, R. et al. (2025). Noto Peninsula 2024 earthquake building damage dataset. n = 140,208 buildings, CC-BY 4.0. Published as Earth System Science Data 17, 5259 (2025); Zenodo DOI: 10.5281/zenodo.11055711. The reported F1 = 0.94 is agreement between the authors' multi-source visual assessment and independent ground-survey photographs, measured on an independently surveyed validation subset — roughly 40 m corridors around documented survey paths in four settlements plus scattered rural areas — not across all 140,208 buildings.
 
 **Imagery.** GSI post-event orthophoto tiles at z=18 (~0.47 m/pixel for the Wajima Asaichi market hero zone, captured 11 January 2024) and z=17 (~1.2 m/pixel for wider Wajima context). Required attribution on any derived imagery: 「地理院タイル」 (Map tiles by GSI).
 
@@ -71,11 +71,11 @@ These two scripts are the project's Layer-0 — already validated, no further wo
 
 ## 4. Honest framing of model performance
 
-**The single most important framing decision in this project.** Vescovo et al.'s F1 = 0.94 is *human ground-survey* validation — buildings inspected on foot or by experts working with multiple data sources. It is not image-only model performance. SiteLens is image-only. The model's F1 will be lower, and that is correct.
+**The single most important framing decision in this project.** Vescovo et al.'s F1 = 0.94 is *label validation* — agreement between the authors' multi-source visual assessment and independent ground-survey photographs, measured on an independently surveyed subset, not across the full dataset (n = 140,208). The labels themselves are expert image interpretation; the 0.94 is how well that interpretation held up against photographs taken on the ground. It is not image-only model performance. SiteLens is image-only. The model's F1 will be lower, and that is correct.
 
 **The discipline.** In every audience-facing context (README, demo, presentation, LinkedIn post, capstone submission), the two numbers are reported separately and never conflated:
 
-- "Vescovo et al. 2025 ground truth: F1 = 0.94 (human-on-human, ground survey, n = 140,208)."
+- "Vescovo et al. 2025 ground truth: F1 = 0.94 on an independently surveyed validation subset; dataset n = 140,208."
 - "SiteLens model: F1 = [actual measured number] (image-only classification, evaluated against held-out test split of Vescovo labels)."
 
 A target F1 > 0.6 for image-only binary classification (destroyed vs. survived) is a defensible MVP threshold. Better is welcome but not required.
@@ -269,7 +269,7 @@ These six moves net *reduce* the codebase: fewer files (no distilbart loader), f
 
 - *Report per-class F1, precision, recall, and confusion matrix — not accuracy.* The class imbalance in Vescovo (destroyed is a small minority of 140,208 buildings) makes accuracy uninformative. A model with 95% accuracy that catches 30% of destroyed buildings is useless for triage; a model with 80% accuracy that catches 90% of destroyed buildings is the product. Per-class metrics are the only honest report.
 
-- *Track model F1 and Vescovo human-on-human F1 separately.* The §4 honest-framing discipline applies: every published number includes both, never conflated. Expected model F1 in the 0.6–0.75 range for image-only binary classification at 64×64; that is a defensible result and the honest one. Quoting Vescovo's 0.94 as the model number is the single most damaging move available.
+- *Track model F1 and Vescovo's label-validation F1 separately.* The §4 honest-framing discipline applies: every published number includes both, never conflated. Expected model F1 in the 0.6–0.75 range for image-only binary classification at 64×64; that is a defensible result and the honest one. Quoting Vescovo's 0.94 as the model number is the single most damaging move available.
 
 - *AUC as a complementary monitoring metric during training.* AUC is threshold-independent and more honest than accuracy on imbalanced data. Default monitoring set: training loss, validation loss, validation AUC, validation per-class F1.
 
@@ -421,6 +421,8 @@ sitelens/
 
 ROC-AUC 0.918. Class imbalance (~3.5:1) handled with `BCEWithLogitsLoss pos_weight` derived from the training split. Test split locked to `model/weights/test_split.csv` on first run; `evaluate.py` always scores the same buildings.
 
+**Correction (27 Aug 2026) — the "locked on first run" claim above is wrong.** It is retained, not overwritten, because it is the record of what was believed when these numbers were accepted. `train.py:161-162` rewrites `test_split.csv` unconditionally on every run; there is no `if SPLIT_OUT.exists()` guard anywhere, and "lock"/"locked" appears only in comments. The split held across reruns only because `SEED=42` is fixed and `load_labeled_frame()` is deterministic. The 0.789 / 0.870 / 0.918 figures above stand — the audit confirmed the split itself is leakage-free. See the code audit below (27 Aug 2026), Correction 1.
+
 Full-dataset predictions written to `data/noto_crops/predictions.csv` for demo wiring (pre-computed lookup; the Streamlit app loads no model live).
 
 *Honest framing enforced in output:* `evaluate.py` prints model F1 and Vescovo et al. 2025 ground-survey F1 = 0.94 side by side with an explicit label that they are different kinds of number. Never conflated.
@@ -475,6 +477,35 @@ Full-dataset predictions written to `data/noto_crops/predictions.csv` for demo w
 - *Layer 2/3 notebook wiring.* Notebook still uses isolated `translate()` calls; Streamlit wires them. Low-priority cleanup, non-blocking.
 
 **Capstone status — provisionally closed, 11 Jun 2026.** Build, evaluation, deployment, README, and submission complete. Held provisional pending (1) Marina Wyss feedback, folded as dated patches not a rewrite, (2) bootcamp-side capstone review, and (3) my own competency-mapping expansion. The two-F1 honesty audit across README, deck, LinkedIn, CV, submission is the gate before final close; the README line-102 distilbart correction is the one known accuracy gap going in.
+
+**Code audit — `train.py` / `evaluate.py` (27 Aug 2026).** Read-only forensic audit run ahead of the 6 Sep Technion defence. Seven questions, all answered from code with `file:line` citations. Three closures, two corrections to this log, one new load-bearing finding.
+
+- *Test contamination — closed. The number is clean.* The split structure is three-way, not two-way: `test` is carved from the de-duplicated frame at `train.py:155-156` (`TEST_FRAC=0.15`, `stratify=df["y"]`, `random_state=42`), then `val` is carved from the `train_val` remainder at `train.py:158-159` (`VAL_FRAC=0.15`, `val_rel=0.15/0.85≈0.1765`). Nominal 70/15/15 → train 1,376 / val 295 / test 296. All three are formed after `drop_duplicates(subset="s_fid")` at `train.py:98`. Early stopping (`train.py:197-212`) monitors macro-F1 on `val_loader` (`CropDataset(val, False)`, `train.py:174`); the best-only checkpoint at `train.py:206` is written on val improvement, and `evaluate.py:41` loads exactly that checkpoint. `train.py` never constructs a `test_loader`. The buildings early stopping saw and the buildings in `test_split.csv` are disjoint by construction — the reported macro F1 0.870 carries no early-stopping optimism. `pos_weight` (`train.py:166-168`) is counted from `train` only; neither val nor test rows enter it. Also clean.
+
+- *Threshold — closed. It was never chosen.* Hard-coded literal `0.5` at `evaluate.py:46`, `evaluate.py:81` and `train.py:198`. No named constant, no config, no derivation. A repo-wide search for threshold / cutoff / `roc_curve` / `precision_recall_curve` / youden returns only prose in `README.md:119-120` and unrelated MMI banding. `roc_auc_score` is computed (`evaluate.py:58`) but only printed. No threshold selection exists in this codebase. Since nothing was tuned, test data could not have been used to tune it — the omission is what makes the answer clean.
+
+- *Threshold sweep is cheap — closed.* `predictions.csv` carries `s_fid, true_label, pred_prob, pred_label` across 1,967 rows (the full de-duplicated frame, augmentation off, deterministic). `pred_prob` is a continuous sigmoid rounded to 4 dp. A held-out sweep is an inner join to the 296 `s_fid`s in `test_split.csv` — no re-inference required.
+
+- *Correction 1 — the test split is not locked.* This log states "Test split locked to `model/weights/test_split.csv` on first run." That is not what the code does. `train.py:161-162` writes the file unconditionally on every run; there is no `if SPLIT_OUT.exists()` guard anywhere. "Lock" / "locked" appears only in comments (`train.py:52, 162, 164`). The split is stable across reruns only because `SEED=42` is fixed and `load_labeled_frame()` is deterministic. The consequence is load-bearing for the next experiment: any change to `labels.csv`, to the crop files on disk, or to the split constants silently rewrites the "locked" test set on the next `train.py` run, and a subsequent `evaluate.py` scores a different population while reporting the same metric names. Re-extracting crops — which is exactly what Correction 2 implies — changes `labels.csv`. The 296 `s_fid`s must be frozen as a committed artefact independent of `labels.csv`, and a write-once guard added, *before* any re-extraction. Otherwise the before/after comparison of a resolution experiment is uninterpretable, because the two arms would be scored on different buildings.
+
+- *Correction 2 — the resolution finding.* New, and probably where recall is lost. `IMG_SIZE = 224` (`train.py:54`) and `transforms.Resize((224,224))` (`train.py:105`) match MobileNetV2's ImageNet pretraining dimension, so the network input is correct. The problem is upstream of it. Crops are stored on disk at 64×64. Native extraction windows in `labels.csv` (`window_width`) run from 8.5 px to 408 px, mean ≈ 38 px. Every building — a ~4 m house at 8.5 px and a ~190 m structure at 408 px — is normalised to the same 64×64 raster, then up-sampled again to 224.
+  - *Small buildings:* ~8–20 px of real signal interpolated up ~26× in area. Whether a roofline is fragmented or intact is close to unresolvable at that scale.
+  - *Large buildings:* 408 px down-sampled to 64 discards ~97% of available pixels before the model ever sees them.
+
+  A 48× dynamic range in real information is collapsed to one tensor shape. The 64×64 intermediate is a lossy bottleneck in both directions, and it is a sampling decision in our pipeline, not a model limitation. This is the same class of defect as the world-vs-pixel squarify bug (§6, 18 May) — geometric fidelity of the sample before the model. One instance was found and fixed; this is a second instance, unfixed. Direct bearing on the destroyed-class recall of 0.692 at precision 0.918: the error-concentration analysis (30–31 Aug) should treat `window_width` as the primary slice axis, not a secondary one.
+
+- *Correction to the planned error analysis — there is no damage grade to slice by.* Vescovo's schema is natively binary: survived (0) / destroyed (1), plus 9 (obstructed) and 99 (missing or inconsistent). There is no graded scale and therefore no binarisation cut with adjacent grades. The ambiguity axis has to come from the `conf` column and from the 37 class-9 obstructed buildings that were dropped at extraction — those are precisely the hard cases, and the model is currently never evaluated on them. Worth stating out loud rather than leaving implicit.
+
+- *Vescovo 0.94 — verified against source, and narrower than this log implies.* Now published as Vescovo et al., ESSD 17, 5259 (2025). The 0.94 is the harmonic F1 between survived and destroyed classes, measuring agreement between the authors' own multi-source visual assessment and independent ground-survey photographs supplied by Tokoha and Tohoku University teams, computed over roughly 40 m corridors around documented survey paths in four settlements plus scattered rural areas. It is not measured across 140,208 buildings — 140,208 is the dataset size. This log and the SR decisions log both pair the two figures in a way that reads as though the F1 spans the full dataset. Both should be amended to: "F1 0.94 on an independently surveyed validation subset; dataset n = 140,208." Second-order but useful: the Vescovo labels are expert image interpretation validated against ground photographs, not ground survey itself. Our model attempts the same visual task the annotators performed, which makes 0.94 a reasonable statement of the human ceiling on this imagery — still not a number to subtract from, but closer in kind than "a different kind of number" conveys.
+
+- *External comparable located — and it is favourable.* Zhang et al., Remote Sensing 17(17):3116 (2025), "Deep Learning-Based Collapsed Building Mapping from Post-Earthquake Aerial Imagery." Same event, same region: trained on Wajima, Machinomachi and Ukai; tested on Suzu (Noto) and Mashiki (Kumamoto 2016). Aerial imagery at 0.2 m/px — 2.35× finer than our GSI z=18 at ~0.47 m/px. Architecture: PVTv2 encoder with an Uncertainty-Guided Fusion decoder. Reported in-domain: recall 79%, precision 68% → collapsed-class F1 ≈ 0.73. Out-of-domain (Mashiki): recall 66%, precision 77%. Ours: destroyed-class F1 0.789, precision 0.918, recall 0.692. Caveats before this is used anywhere: their in-domain test is Suzu, a town outside their training set, which is a harder generalisation test than our within-Wajima held-out split; theirs is area-based segmentation mapping, ours is per-building classification, so the denominators differ. Not a clean "we score higher." What it does support: our number sits inside the published range for this problem on this event, and the precision/recall shape is inverted — they are recall-heavy (0.68/0.79), we are precision-heavy (0.92/0.69). Same task, opposite operating points, which is evidence that the 0.5 threshold is a placement choice rather than a capability ceiling. Also worth noting: their decoder is uncertainty-guided. The direction named in this log as SiteLens's next need is the direction the published work on this event already took.
+
+**Carries forward (27 Aug 2026).**
+
+1. Freeze the 296 test `s_fid`s and add a write-once guard before any re-extraction.
+2. Threshold sweep from stored `pred_prob`, held-out rows only.
+3. Error analysis with `window_width` as the primary slice.
+4. Amend the Vescovo framing in this log and in the SR decisions log §5.
 
 ## 11. 2026-08-13
 

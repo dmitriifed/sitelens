@@ -3,15 +3,21 @@ evaluate.py — Model evaluation + demo-prediction export (PyTorch).
 
 Part of SiteLens AI. Layer-1 evaluation. Week 11 deliverable.
 
-Loads the best checkpoint from train.py and evaluates it on the SAME
-locked held-out test split. Reports confusion matrix + per-class
-precision/recall/F1 + macro-F1 + ROC-AUC. Prints the image-only MODEL F1
-next to the Vescovo et al. 2025 ground-survey F1 = 0.94 with an explicit
-note that they are different kinds of number — the build-log §4 framing
-enforced in the output, not just in discipline.
+Loads the best checkpoint from train.py and evaluates it on the
+held-out test split recorded in model/weights/test_split.csv. Reports
+confusion matrix + per-class precision/recall/F1 + macro-F1 + ROC-AUC.
+Prints the image-only MODEL F1 next to the Vescovo et al. 2025
+label-validation F1 = 0.94 (agreement between their multi-source visual
+assessment and independent ground-survey photographs, on an
+independently surveyed validation subset; dataset n = 140,208) with an
+explicit note that they are different kinds of number — the build-log
+§4 framing enforced in the output, not just in discipline.
+
+Vescovo et al. 2025: Earth System Science Data 17, 5259; dataset Zenodo
+DOI 10.5281/zenodo.11055711.
 
 Also scores every crop and writes data/noto_crops/predictions.csv
-(s_fid, true_label, pred_label, pred_prob) so the Streamlit demo shows
+(s_fid, true_label, pred_prob, pred_label) so the Streamlit demo shows
 predicted-vs-actual from a pre-computed file with NO model loaded live.
 
 Run from repo root (after train.py):  python model/evaluate.py
@@ -28,7 +34,7 @@ from sklearn.metrics import (confusion_matrix, classification_report,
 from train import (load_labeled_frame, build_model, CropDataset, predict_probs,
                    WEIGHTS_OUT, SPLIT_OUT, DATA_DIR, BATCH_SIZE, NUM_WORKERS, DEVICE)
 
-VESCOVO_F1 = 0.94                     # human-on-human ground survey, n=140,208 — NOT the model
+VESCOVO_F1 = 0.94                     # label-validation F1, independently surveyed subset; dataset n=140,208 — NOT the model
 PRED_OUT   = DATA_DIR / "predictions.csv"
 
 
@@ -66,7 +72,7 @@ def main():
     print(f"      destroyed F1 = {dest:.3f}")
     print(f"      ROC-AUC      = {auc:.3f}")
     print(f"  Vescovo et al. 2025 ground truth: F1 = {VESCOVO_F1:.2f} "
-          "(human-on-human, ground survey, n=140,208).")
+          "on an independently surveyed validation subset; dataset n=140,208.")
     print("  Different kinds of number. Never quote 0.94 as the model's score.")
     print("=" * 68)
 
