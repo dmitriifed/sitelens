@@ -518,6 +518,37 @@ Full-dataset predictions written to `data/noto_crops/predictions.csv` for demo w
   scan. Text-only patches allowed before freeze; no structural
   redeploys.
 
+## 12. 2026-09-01
+
+- **Bulk data relocated to the BRIDGE partition, junctioned back.** Untracked
+  local data moved off `C:` to `D:\SRDATA\sitelens\` and replaced with
+  directory junctions at the original repo paths, so every relative path in the
+  pipeline still resolves:
+  - `data\noto_crops\all`  →  `D:\SRDATA\sitelens\noto_crops\all` (2,045 PNGs, 12.8 MB)
+  - `data\raw`  →  `D:\SRDATA\sitelens\raw` (Noto GPKG + `test_sample.py`, 47.9 MB)
+  - `data\processed`  →  `D:\SRDATA\sitelens\processed` (empty)
+  Counts and bytes verified through each junction against the pre-move record;
+  `git status` byte-identical before and after; nothing deleted. The deployed
+  Streamlit app is unaffected — it reads only the tracked
+  `data\noto_crops\{labels,predictions}.csv` and `polygons.parquet`, none of
+  which are under a moved path.
+- **Transport copy of the checkpoint.** `model\weights\mobilenetv2_noto.pt`
+  copied (not moved) to `D:\SRDATA\sitelens\transport\weights\`; the original
+  stays in the repo tree. The trained weights are the one non-reproducible
+  artefact.
+- **Error-analysis scripts landed** under `analysis\error_analysis_20260901\`
+  (six scripts + `OUTPUT.txt` + `sweep_results.csv` + a README). Read-only audit
+  of `predictions.csv` / `labels.csv` / `test_split.csv`, run 1 Sep 2026,
+  reproducible from tracked files alone. **Findings are deliberately not
+  transcribed into this log yet — pending a manual walkthrough.**
+- **Val split dumped for review.** `analysis\dump_splits.py` reconstructs
+  `train.py`'s three-way split (imports `model\train.py`; `load_labeled_frame`
+  + the two stratified `train_test_split` calls, `SEED=42`). Reconstructed test
+  set verified to match `model\weights\test_split.csv` exactly (296 s_fids).
+  Outputs `analysis\splits\{train_ids,val_ids,val_misses}.csv`; `val_misses.csv`
+  (19 rows: val destroyed called survived at 0.5) is the eyeball list for the
+  disciplined sample review. The test set stays untouched for selection.
+
 ---
 
 End of build log v0.

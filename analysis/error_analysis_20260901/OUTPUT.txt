@@ -1,0 +1,328 @@
+===== repro.py =====
+predictions rows: 1967 | unique s_fid: 1967
+test_split rows : 296 | unique s_fid: 296
+labels rows     : 1994 | unique s_fid: 1967
+
+joined test rows: 296
+label agreement : True
+
+--- REPRODUCTION at threshold 0.5, n = 296 ---
+              precision    recall  f1-score   support
+
+    survived      0.919     0.983     0.950       231
+   destroyed      0.918     0.692     0.789        65
+
+    accuracy                          0.919       296
+   macro avg      0.919     0.837     0.870       296
+weighted avg      0.919     0.919     0.915       296
+
+ROC-AUC: 0.9177
+confusion (rows=true, cols=pred):
+ [[227   4]
+ [ 20  45]]
+
+class balance in test: destroyed = 65 / 296 = 0.2196
+
+published: destroyed-F1 0.789 | macro-F1 0.870 | ROC-AUC 0.918
+
+===== sweep.py =====
+=== DESTROYED-CLASS THRESHOLD SWEEP (held-out test, n=296, 65 destroyed) ===
+
+At the shipped threshold 0.50:
+ th  tp  fp  fn  prec   rec    f1  macro
+0.5  45   4  20 0.918 0.692 0.789   0.87
+
+Best destroyed-F1:
+  th  tp  fp  fn  prec   rec    f1  macro
+0.55  45   1  20 0.978 0.692 0.811  0.884
+
+Best macro-F1:
+  th  tp  fp  fn  prec   rec    f1  macro
+0.55  45   1  20 0.978 0.692 0.811  0.884
+
+--- selected operating points ---
+  th  tp  fp  fn  prec   rec    f1  macro
+0.05  63 161   2 0.281 0.969 0.436  0.449
+0.10  59  99   6 0.373 0.908 0.529  0.622
+0.15  57  66   8 0.463 0.877 0.606  0.712
+0.20  55  41  10 0.573 0.846 0.683  0.782
+0.25  52  24  13 0.684 0.800 0.738  0.828
+0.30  51  14  14 0.785 0.785 0.785  0.862
+0.35  50  10  15 0.833 0.769 0.800  0.873
+0.40  48   6  17 0.889 0.738 0.807  0.879
+0.45  46   6  19 0.885 0.708 0.786  0.867
+0.50  45   4  20 0.918 0.692 0.789  0.870
+0.60  43   0  22 1.000 0.662 0.796  0.875
+0.70  40   0  25 1.000 0.615 0.762  0.855
+0.80  29   0  36 1.000 0.446 0.617  0.772
+0.90   9   0  56 1.000 0.138 0.243  0.568
+
+--- recall targets: cheapest threshold reaching each ---
+recall >= 0.75  ->  th 0.36  prec 0.845  rec 0.754  F1 0.797  (TP 49, FP 9, FN 16)
+recall >= 0.80  ->  th 0.28  prec 0.722  rec 0.800  F1 0.759  (TP 52, FP 20, FN 13)
+recall >= 0.85  ->  th 0.17  prec 0.528  rec 0.862  F1 0.655  (TP 56, FP 50, FN 9)
+recall >= 0.90  ->  th 0.11  prec 0.393  rec 0.908  F1 0.549  (TP 59, FP 91, FN 6)
+recall >= 0.95  ->  th 0.08  prec 0.346  rec 0.954  F1 0.508  (TP 62, FP 117, FN 3)
+
+===== errors.py =====
+=== 1. WHERE THE 20 MISSES SIT IN PROBABILITY SPACE ===
+missed destroyed (n=20) pred_prob:
+count    20.0000
+mean      0.2170
+std       0.1387
+min       0.0196
+25%       0.0964
+50%       0.1876
+75%       0.3331
+max       0.4524
+
+caught destroyed (n=45) pred_prob:
+count    45.0000
+mean      0.8235
+std       0.0993
+min       0.5846
+25%       0.7596
+50%       0.8320
+75%       0.8923
+max       0.9812
+
+miss probabilities sorted: [0.02, 0.048, 0.077, 0.088, 0.089, 0.099, 0.116, 0.146, 0.156, 0.173, 0.202, 0.223, 0.244, 0.286, 0.324, 0.359, 0.368, 0.426, 0.442, 0.452]
+
+=== A. PIXELS ON BUILDING (native window, max dim) — destroyed-class recall by group (test, n=296) ===
+     group  n_all  n_destroyed  recall      95% CI  missed
+ Q1 <=28px     74           18   0.556 [0.34,0.75]       8
+ Q2 <=35px     74           16   0.625 [0.39,0.82]       6
+ Q3 <=44px     74           19   0.789 [0.57,0.91]       4
+Q4 <=155px     74           12   0.833 [0.55,0.95]       2
+
+=== B. HAZARD CLASS — destroyed-class recall by group (test, n=296) ===
+       group  n_all  n_destroyed  recall      95% CI  missed
+        fire     49           49   0.857 [0.73,0.93]       7
+none/seismic    247           16   0.188 [0.07,0.43]      13
+
+=== C. MUNICIPALITY — destroyed-class recall by group (test, n=296) ===
+               group  n_all  n_destroyed  recall      95% CI  missed
+          石川県、輪島市、堀町      3            0     NaN         NaN     NaN
+         石川県、輪島市、平成町      1            0     NaN         NaN     NaN
+         石川県、輪島市、新橋通     15            1   0.000 [0.00,0.79]     1.0
+       石川県、輪島市、河井町丁字      5            0     NaN         NaN     NaN
+      石川県、輪島市、河井町上本町     11           11   0.636 [0.35,0.85]     4.0
+      石川県、輪島市、河井町中央通     14            3   0.333 [0.06,0.79]     2.0
+      石川県、輪島市、河井町中田町      7            0     NaN         NaN     NaN
+     石川県、輪島市、河井町伊右エ門     13            7   1.000 [0.65,1.00]     0.0
+      石川県、輪島市、河井町川端丁      7            7   0.571 [0.25,0.84]     3.0
+   石川県、輪島市、河井町本町一川端丁     10           10   1.000 [0.72,1.00]     0.0
+      石川県、輪島市、河井町本町三      1            0     NaN         NaN     NaN
+      石川県、輪島市、河井町本町二     13           13   0.923 [0.67,0.99]     1.0
+      石川県、輪島市、河井町森の下      8            5   0.800 [0.38,0.96]     1.0
+      石川県、輪島市、河井町祇園東      7            0     NaN         NaN     NaN
+      石川県、輪島市、河井町祇園西      1            0     NaN         NaN     NaN
+     石川県、輪島市、河井町若葉，旭     16            0     NaN         NaN     NaN
+        石川県、輪島市、釜屋谷町      2            0     NaN         NaN     NaN
+       石川県、輪島市、鳳至町上町     11            2   0.000 [0.00,0.66]     2.0
+      石川県、輪島市、鳳至町上町南      3            0     NaN         NaN     NaN
+石川県、輪島市、鳳至町上町南（小学校前）      4            0     NaN         NaN     NaN
+       石川県、輪島市、鳳至町下町     13            0     NaN         NaN     NaN
+   石川県、輪島市、鳳至町下町鳳至丁北      8            0     NaN         NaN     NaN
+  石川県、輪島市、鳳至町住吉区，末広北     18            3   0.000 [0.00,0.56]     3.0
+  石川県、輪島市、鳳至町寺山岸，堂金田     10            1   0.000 [0.00,0.79]     1.0
+      石川県、輪島市、鳳至町日吉山      3            0     NaN         NaN     NaN
+       石川県、輪島市、鳳至町末広      5            0     NaN         NaN     NaN
+      石川県、輪島市、鳳至町末広南     13            0     NaN         NaN     NaN
+   石川県、輪島市、鳳至町横町，住吉区     10            0     NaN         NaN     NaN
+    石川県、輪島市、鳳至町浜町上，下     10            0     NaN         NaN     NaN
+      石川県、輪島市、鳳至町浜町下      9            0     NaN         NaN     NaN
+      石川県、輪島市、鳳至町畠田南      2            0     NaN         NaN     NaN
+      石川県、輪島市、鳳至町畠田東      6            0     NaN         NaN     NaN
+      石川県、輪島市、鳳至町石浦町      5            0     NaN         NaN     NaN
+   石川県、輪島市、鳳至町稲荷東三，四     12            0     NaN         NaN     NaN
+     石川県、輪島市、鳳至町稲荷西一      4            1   0.000 [0.00,0.79]     1.0
+     石川県、輪島市、鳳至町稲荷西二      5            0     NaN         NaN     NaN
+     石川県、輪島市、鳳至町鳳来石浦      3            0     NaN         NaN     NaN
+ 石川県、輪島市、鳳至町鳳至丁南鳳至本町      8            1   0.000 [0.00,0.79]     1.0
+
+=== D. VESCOVO LABEL CONFIDENCE — destroyed-class recall by group (test, n=296) ===
+ group  n_all  n_destroyed  recall      95% CI  missed
+ multi    295           65   0.692 [0.57,0.79]    20.0
+single      1            0     NaN         NaN     NaN
+
+=== E. FALSE POSITIVES (survived predicted destroyed) ===
+                      s_fid  pred_prob     win_px      municipality       hazard  conf
+20230303-49281-13461-s-8958     0.5408 141.829551    石川県、輪島市、鳳至町石浦町 none/seismic multi
+20230303-49281-13461-s-8271     0.5405  83.933945 石川県、輪島市、鳳至町横町，住吉区 none/seismic multi
+20230303-49284-13461-s-6573     0.5868  62.291462    石川県、輪島市、河井町本町三 none/seismic multi
+20230303-49284-13461-s-6526     0.5150  32.550250   石川県、輪島市、河井町伊右エ門 none/seismic multi
+
+=== F. THE 20 MISSES, LISTED ===
+Traceback (most recent call last):
+  File "/home/claude/sl/errors.py", line 70, in <module>
+    print(fn[["s_fid","pred_prob","win_px","municipality","hazard","conf"]]
+          ~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/pandas/core/frame.py", line 4384, in __getitem__
+    indexer = self.columns._get_indexer_strict(key, "columns")[1]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/pandas/core/indexes/base.py", line 6302, in _get_indexer_strict
+    self._raise_if_missing(keyarr, indexer, axis_name)
+  File "/usr/local/lib/python3.11/dist-packages/pandas/core/indexes/base.py", line 6355, in _raise_if_missing
+    raise KeyError(f"{not_found} not in index")
+KeyError: "['hazard'] not in index"
+
+===== interact.py =====
+=== THE CONFOUND CHECK: is size an effect, or is it hazard in disguise? ===
+
+--- FIRE-ZONE destroyed (n=49) ---
+size quartile  n  caught  recall      95% CI
+    Q1 <=28px 13       9   0.692 [0.42,0.87]
+    Q2 <=35px 11      10   0.909 [0.62,0.98]
+    Q3 <=44px 16      14   0.875 [0.64,0.97]
+   Q4 <=155px  9       9   1.000 [0.70,1.00]
+
+--- NON-FIRE destroyed (n=16) ---
+size quartile  n  caught  recall      95% CI
+    Q1 <=28px  5       1   0.200 [0.04,0.62]
+    Q2 <=35px  5       0   0.000 [0.00,0.43]
+    Q3 <=44px  3       1   0.333 [0.06,0.79]
+   Q4 <=155px  3       1   0.333 [0.06,0.79]
+
+=== SIZE DISTRIBUTION: fire vs non-fire destroyed ===
+       count  mean   std   min   25%   50%   75%    max
+fire                                                   
+False   16.0  34.6  12.1  16.5  26.9  33.7  38.0   56.2
+True    49.0  37.7  20.4  11.4  27.9  34.7  41.7  155.3
+
+=== MEAN PREDICTED PROBABILITY by hazard, destroyed only ===
+       count   mean    std    min    25%    50%    75%    max
+fire                                                         
+False   16.0  0.321  0.274  0.020  0.111  0.213  0.445  0.882
+True    49.0  0.740  0.235  0.048  0.716  0.818  0.887  0.981
+
+=== SAME SPLIT ACROSS THE WHOLE 1,967 (train+val+test; NOT held out) ===
+  hazard  n_destroyed  caught  recall      95% CI
+non-fire          122      22   0.180 [0.12,0.26]
+    fire          311     260   0.836 [0.79,0.87]
+
+(train rows included -> optimistic; pattern only, not a generalisation estimate)
+
+=== CLASS COMPOSITION ===
+test destroyed:  fire 49 | non-fire 16
+all  destroyed:  fire 311 | non-fire 122
+test survived :  fire 0 | non-fire 231
+
+===== baseline.py =====
+=== IS THE FIRE FLAG SEPARABLE FROM THE LABEL? ===
+
+TEST (n=296)
+destroyed    0   1
+gsi_fire          
+0          231  16
+1            0  49
+
+ALL  (n=1967)
+destroyed     0    1
+gsi_fire            
+0          1534  122
+1             0  311
+
+
+=== TRIVIAL BASELINE: predict destroyed iff gsi_fire == 1 ===
+
+--- TEST held-out (n=296) ---
+  RULE  (destroyed = in fire zone):
+              precision    recall  f1-score   support
+
+    survived      0.935     1.000     0.967       231
+   destroyed      1.000     0.754     0.860        65
+
+    accuracy                          0.946       296
+   macro avg      0.968     0.877     0.913       296
+weighted avg      0.949     0.946     0.943       296
+
+  MODEL (MobileNetV2 @ 0.5):
+              precision    recall  f1-score   support
+
+    survived      0.919     0.983     0.950       231
+   destroyed      0.918     0.692     0.789        65
+
+    accuracy                          0.919       296
+   macro avg      0.919     0.837     0.870       296
+weighted avg      0.919     0.919     0.915       296
+
+  destroyed-F1  rule 0.860   model 0.789
+  macro-F1      rule 0.913   model 0.870
+
+--- ALL rows (n=1967) ---
+  RULE  (destroyed = in fire zone):
+              precision    recall  f1-score   support
+
+    survived      0.926     1.000     0.962      1534
+   destroyed      1.000     0.718     0.836       433
+
+    accuracy                          0.938      1967
+   macro avg      0.963     0.859     0.899      1967
+weighted avg      0.943     0.938     0.934      1967
+
+  MODEL (MobileNetV2 @ 0.5):
+              precision    recall  f1-score   support
+
+    survived      0.909     0.984     0.945      1534
+   destroyed      0.919     0.651     0.762       433
+
+    accuracy                          0.911      1967
+   macro avg      0.914     0.817     0.854      1967
+weighted avg      0.911     0.911     0.905      1967
+
+  destroyed-F1  rule 0.836   model 0.762
+  macro-F1      rule 0.899   model 0.854
+
+
+=== HOW OFTEN DOES THE MODEL SIMPLY AGREE WITH THE FIRE FLAG? ===
+TEST: model prediction == fire flag on 95.3% of rows
+model pred    0   1
+gsi_fire           
+0           240   7
+1             7  42
+
+ALL: model prediction == fire flag on 95.0% of rows
+model pred     0    1
+gsi_fire             
+0           1609   47
+1             51  260
+
+
+===== mechanism.py =====
+=== MECHANISM: do non-fire FALSE POSITIVES cluster near the fire zone? ===
+(if yes -> the model reads burn-scar CONTEXT, not the building)
+
+                          count   mean    std   min    25%    50%    75%    max
+kind                                                                           
+non-fire FALSE POSITIVE    25.0  215.7  147.4  18.3   85.0  226.0  333.2  527.8
+non-fire MISS             100.0  199.1  132.2   8.0   69.1  220.0  288.7  483.6
+non-fire TP (real find)    22.0  145.5  137.7   8.4   34.3   86.1  261.4  522.6
+non-fire true negative   1509.0  250.7  125.5  18.2  157.1  233.2  337.8  583.3
+
+median distance to nearest fire-zone building:
+  non-fire FALSE POSITIVE      n=   25  median   226.0 m
+  non-fire MISS                n=  100  median   220.0 m
+  non-fire TP (real find)      n=   22  median    86.1 m
+  non-fire true negative       n= 1509  median   233.2 m
+
+=== FP RATE BY DISTANCE BAND (non-fire, true survivors only) ===
+            n  false_pos  fp_rate
+band                             
+<50m       44          4   0.0909
+50-100m   123          4   0.0325
+100-200m  436          4   0.0092
+200-400m  713         10   0.0140
+>400m     218          3   0.0138
+
+
+=== COMBINING RULE + MODEL (all 1967 rows) ===
+rule only  (fire flag): destroyed-F1 0.836  macro 0.899  recall 0.718  precision 1.000
+model only (CNN @0.5) : destroyed-F1 0.762  macro 0.854  recall 0.651  precision 0.919
+rule OR model         : destroyed-F1 0.842  macro 0.901  recall 0.769  precision 0.930
+
+=== WHAT THE MODEL ADDS THAT THE RULE CANNOT ===
+non-fire destroyed buildings the model finds and the rule cannot: 22
+non-fire destroyed total: 122  -> model recovers 18.0% of them
+cost: 25 false positives among non-fire survivors
+
