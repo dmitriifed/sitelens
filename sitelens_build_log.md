@@ -571,3 +571,22 @@ pixel window) already closes pixel↔structure↔world — the missing piece is
 an output schema per flagged building {id, footprint, centroid, evidence
 class, p, capture spec} = UAV task packet for the coarse→fine handoff.
 Reviewer: DF. First commit from the Fedora environment.
+
+**Crop review — 4 Sep 2026 (Fedora, contact sheet).**
+All 19 val misses eyeballed (analysis/review/contact_sheet.html; left 64px
+pixel-honest, right bilinear-224 model input). Finding: every miss contains
+BOTH a standing and a collapsed structure in frame — the crop never marks
+which building the label refers to; the model scores the frame and the
+dominant structure wins. Third defect in the family: squarify = aspect,
+64px = scale, crop-reference = subject. Status: observation pending the
+dominance check (WKT vs window geometry, ~20 min) before "all 19" is
+canonical. Corollary: fire-zone success partly re-explained — scene and
+building always agree inside the burn area, so the ambiguity is costless
+there. Specified experiment, two arms: (A) hard mask outside footprint
+polygon (control, destroys relational signal); (B) footprint mask as 4th
+channel (scene + subject pointer). Prediction: B > A; the gap measures
+neighbour-awareness. Also: the provenance chain (s_fid → WKT → affine →
+pixel window) already closes pixel↔structure↔world — the missing piece is
+an output schema per flagged building {id, footprint, centroid, evidence
+class, p, capture spec} = UAV task packet for the coarse→fine handoff.
+Reviewer: DF. First commit from the Fedora environment.
